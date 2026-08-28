@@ -13,7 +13,7 @@ export default function Nav({
   pathWithoutLocale?: string;
 }) {
   return (
-    <nav>
+    <nav className="site-nav">
       <div className="nav-inner">
         <Link href={`/${locale}/`} className="nav-logo">
           <img src="/images/logo.svg" width={220} alt="Railway Atelier" />
