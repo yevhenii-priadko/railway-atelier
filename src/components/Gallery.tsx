@@ -1,16 +1,20 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
-import { getProjectsForPage } from "@/data/projects";
+import { getProjectsForPage, getTotalWorkPages } from "@/data/projects";
 import ProjectCard from "./ProjectCard";
+import Pagination from "./Pagination";
 
 /**
  * Homepage teaser: shows page 1 of the portfolio (the same static data
  * used for full pagination on /works/) with a link through to the full,
- * paginated archive.
+ * paginated archive. Pagination controls are repeated here (not just on
+ * /works/) so visitors can jump straight to page 2+ without first
+ * clicking through to the archive.
  */
 export default function Gallery({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   const featured = getProjectsForPage(1);
+  const totalPages = getTotalWorkPages();
   return (
     <section className="gallery" id="work">
       <div className="gallery-header">
@@ -22,6 +26,7 @@ export default function Gallery({ locale, dict }: { locale: Locale; dict: Dictio
           <ProjectCard key={project.slug} project={project} locale={locale} />
         ))}
       </div>
+      <Pagination locale={locale} dict={dict} page={1} totalPages={totalPages} />
       <Link href={`/${locale}/works/`} className="gallery-more">
         {dict.work.viewAll} →
       </Link>
