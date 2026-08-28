@@ -31,6 +31,7 @@ export default function WorksListing({
           <p className="section-label">{dict.work.label}</p>
           <h1 className="section-title">{dict.worksPage.title}</h1>
         </div>
+        <Pagination locale={locale} dict={dict} page={page} totalPages={totalPages} variant="top" />
         <div className="works-grid">
           {items.map((project) => (
             <ProjectCard key={project.slug} project={project} locale={locale} />

@@ -12,18 +12,23 @@ export default function Pagination({
   dict,
   page,
   totalPages,
+  variant = "bottom",
 }: {
   locale: Locale;
   dict: Dictionary;
   page: number;
   totalPages: number;
+  variant?: "top" | "bottom";
 }) {
   if (totalPages <= 1) return null;
 
   const hrefFor = (p: number) => (p === 1 ? `/${locale}/works/` : `/${locale}/works/page/${p}/`);
 
   return (
-    <nav className="pagination" aria-label="Pagination">
+    <nav
+      className={variant === "top" ? "pagination pagination-top" : "pagination"}
+      aria-label="Pagination"
+    >
       {page > 1 ? (
         <Link href={hrefFor(page - 1)} className="pagination-link">
           {dict.pagination.prev}
