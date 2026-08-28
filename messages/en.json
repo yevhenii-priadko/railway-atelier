@@ -1,0 +1,98 @@
+{
+  "meta": {
+    "title": "Railway Atelier — Model Railway Workshop",
+    "description": "Hand-built drive conversions, mechanical servicing and DCC setup for collectible locomotives, with attention to every detail."
+  },
+  "nav": {
+    "about": "Workshop",
+    "services": "Services",
+    "process": "Process",
+    "work": "Works",
+    "contact": "Get in touch"
+  },
+  "hero": {
+    "eyebrow": "Model Railway Workshop",
+    "titleLine1": "New life",
+    "titleLine2": "for classic",
+    "titleLine3": "locomotives",
+    "desc": "Here, collectible locomotives get more than a new motor — they get a new character of motion.",
+    "cta": "Discover our services",
+    "quote": "“Silence is the element in which great things fashion themselves.” — Maurice Maeterlinck"
+  },
+  "about": {
+    "label": "About the Workshop",
+    "title": "Precision isn't in the details — it's an attitude",
+    "tagline": "We create the motion these models always deserved.",
+    "body1": "Every model passes through the same pair of hands — from the first inspection to the final test. We don't hand the work off, and we don't rush. If something can be done better, we do it better.",
+    "body2": "For us, this isn't a stream of orders. It's a separate story with every model — its character, its condition, and what it can become after the work is done.",
+    "stats": [
+      { "number": "100%", "label": "Successful conversions" },
+      { "number": "Over 2 years", "label": "Of practice" },
+      { "number": "0", "label": "Unfinished projects" },
+      { "number": "Every project", "label": "done by hand" }
+    ]
+  },
+  "services": {
+    "label": "Services",
+    "title": "What happens to your model",
+    "note": "Every conversion is individual. The scope of work depends on the locomotive's construction, its technical condition, and the motor chosen.",
+    "items": [
+      { "title": "Full Disassembly & Cleaning", "desc": "The locomotive is fully disassembled. Old grease is removed, mechanical assemblies are cleaned, inspected, and assessed for technical condition. If needed, a list of parts for replacement is drawn up." },
+      { "title": "Mechanical Servicing", "desc": "The gearbox is fully disassembled, cleaned, inspected, re-lubricated, and reassembled. Mechanical adjustments and new part installation are carried out as needed." },
+      { "title": "Preparing for the New Motor", "desc": "The stock motor is removed. If necessary, the frame or mounts are reworked to fit a modern brushless drive." },
+      { "title": "Installing the New Drive", "desc": "The new motor is installed, centered, and secured. After mounting, time is allowed for the adhesive bond to fully cure." },
+      { "title": "Final Lubrication & Setup", "desc": "Once assembly is complete, the mechanism receives its final lubrication. The locomotive is run in, and the decoder settings are configured." },
+      { "title": "Final Testing", "desc": "Smoothness of motion, minimum speed, running stability, and overall conversion quality are checked before the model is returned to its owner." }
+    ]
+  },
+  "process": {
+    "label": "How We Work",
+    "title": "Four steps to a new model",
+    "steps": [
+      { "title": "Intake", "desc": "We receive the model, document its initial condition, assess its technical state, and agree on the scope of work required." },
+      { "title": "Disassembly", "desc": "We carefully disassemble the model, document its construction, and prepare all assemblies for further modernization." },
+      { "title": "Installation", "desc": "We install the new drive, carry out any necessary mechanical rework, check the electrical connections, and prepare the model for setup." },
+      { "title": "Testing", "desc": "We run the model in, check the smoothness of motion, perform final setup, and hand the model back to its owner with a 6-month guarantee." }
+    ]
+  },
+  "work": {
+    "label": "Works",
+    "title": "Conversion Archive",
+    "viewAll": "All works",
+    "maker": "Maker",
+    "type": "Work type",
+    "scale": "Scale"
+  },
+  "worksPage": {
+    "back": "← Back to homepage",
+    "title": "Conversion Archive"
+  },
+  "pagination": {
+    "prev": "← Previous",
+    "next": "Next →",
+    "pageOf": "Page {page} of {total}"
+  },
+  "projectDetail": {
+    "back": "← Back to all projects",
+    "worksTitle": "Work performed",
+    "allProjects": "All projects",
+    "prevProject": "← Previous project",
+    "nextProject": "Next project →"
+  },
+  "contact": {
+    "label": "Get in Touch",
+    "title": "Have a model to upgrade?",
+    "bodyLine1": "Tell us about your model. We'll assess its construction, suggest the best conversion option, and honestly explain which work makes sense for your specific case.",
+    "bodyLine2": "We work with models from across Ukraine, except temporarily occupied territories. Models are received and shipped securely via courier services.",
+    "quote": "After a successful conversion, there's sometimes an urge to do something unexpected — turn off the sound. And simply enjoy how quietly and smoothly the model moves.",
+    "ctaEmail": "Email us",
+    "ctaPhone": "Call us"
+  },
+  "footer": {
+    "about": "About",
+    "services": "Services",
+    "work": "Works",
+    "contact": "Contact",
+    "copy": "© 2026 Railway Atelier"
+  }
+}

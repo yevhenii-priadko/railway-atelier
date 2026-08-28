@@ -1,0 +1,98 @@
+{
+  "meta": {
+    "title": "Railway Atelier — Werkstatt für Modelllokomotiven",
+    "description": "Handgefertigte Antriebskonvertierungen, Mechanik-Wartung und DCC-Einrichtung für Sammlerlokomotiven, mit Liebe zum Detail."
+  },
+  "nav": {
+    "about": "Werkstatt",
+    "services": "Leistungen",
+    "process": "Prozess",
+    "work": "Arbeiten",
+    "contact": "Kontakt aufnehmen"
+  },
+  "hero": {
+    "eyebrow": "Werkstatt für Modelllokomotiven",
+    "titleLine1": "Neues Leben",
+    "titleLine2": "für klassische",
+    "titleLine3": "Lokomotiven",
+    "desc": "Hier erhalten Sammlerlokomotiven nicht nur einen neuen Motor, sondern einen neuen Charakter der Bewegung.",
+    "cta": "Unsere Leistungen entdecken",
+    "quote": "„Die Stille ist das Element, in dem sich große Dinge bilden.“ — Maurice Maeterlinck"
+  },
+  "about": {
+    "label": "Über die Werkstatt",
+    "title": "Präzision ist keine Detailfrage, sondern eine Haltung",
+    "tagline": "Wir schaffen die Laufruhe, die diese Modelle immer verdient haben.",
+    "body1": "Jedes Modell durchläuft ein und dieselben Hände — von der ersten Begutachtung bis zum abschließenden Test. Wir geben die Arbeit nicht weiter und wir hetzen nicht. Wenn sich etwas besser machen lässt, machen wir es besser.",
+    "body2": "Für uns ist das kein Auftragsstrom. Jedes Modell ist eine eigene Geschichte — mit seinem Charakter, seinem Zustand und dem, was aus ihm nach der Arbeit werden kann.",
+    "stats": [
+      { "number": "100%", "label": "Erfolgreiche Konvertierungen" },
+      { "number": "Über 2 Jahre", "label": "Praxiserfahrung" },
+      { "number": "0", "label": "Unfertige Projekte" },
+      { "number": "Jedes Projekt", "label": "in Handarbeit" }
+    ]
+  },
+  "services": {
+    "label": "Leistungen",
+    "title": "Was mit Ihrem Modell geschieht",
+    "note": "Jede Konvertierung ist individuell. Der Arbeitsumfang hängt von der Konstruktion der Lokomotive, ihrem technischen Zustand und dem gewählten Motor ab.",
+    "items": [
+      { "title": "Vollständige Demontage & Reinigung", "desc": "Die Lokomotive wird vollständig zerlegt. Altes Fett wird entfernt, die mechanischen Baugruppen werden gereinigt, begutachtet und ihr technischer Zustand bewertet. Bei Bedarf wird eine Liste der zu ersetzenden Teile erstellt." },
+      { "title": "Mechanik-Wartung", "desc": "Das Getriebe wird vollständig zerlegt, gereinigt, geprüft, neu geschmiert und wieder zusammengebaut. Bei Bedarf werden mechanische Einstellungen vorgenommen und neue Teile verbaut." },
+      { "title": "Vorbereitung auf den neuen Motor", "desc": "Der Serienmotor wird ausgebaut. Bei Bedarf wird der Rahmen oder die Halterung für den Einbau eines modernen bürstenlosen Antriebs angepasst." },
+      { "title": "Einbau des neuen Antriebs", "desc": "Der neue Motor wird eingebaut, zentriert und fixiert. Nach der Montage wird eine Aushärtezeit für die Klebeverbindung eingehalten." },
+      { "title": "Abschließende Schmierung & Einstellung", "desc": "Nach Abschluss der Montage erhält der Mechanismus die finale Schmierung. Die Lokomotive wird eingefahren, und die Dekoder-Parameter werden eingestellt." },
+      { "title": "Abschlusstest", "desc": "Vor der Übergabe an den Besitzer werden Laufruhe, Mindestgeschwindigkeit, Betriebsstabilität und die Gesamtqualität der Konvertierung geprüft." }
+    ]
+  },
+  "process": {
+    "label": "Unsere Arbeitsweise",
+    "title": "Vier Schritte zu einem neuen Modell",
+    "steps": [
+      { "title": "Annahme", "desc": "Wir nehmen das Modell entgegen, dokumentieren seinen Ausgangszustand, bewerten den technischen Zustand und stimmen den Arbeitsumfang ab." },
+      { "title": "Demontage", "desc": "Wir zerlegen das Modell sorgfältig, dokumentieren die Konstruktion und bereiten alle Baugruppen für die weitere Modernisierung vor." },
+      { "title": "Einbau", "desc": "Wir bauen den neuen Antrieb ein, führen notwendige mechanische Anpassungen durch, prüfen die elektrischen Verbindungen und bereiten das Modell für die Einstellung vor." },
+      { "title": "Test", "desc": "Wir fahren das Modell ein, prüfen die Laufruhe, nehmen die Endeinstellung vor und übergeben das Modell mit 6 Monaten Garantie an den Besitzer." }
+    ]
+  },
+  "work": {
+    "label": "Arbeiten",
+    "title": "Konvertierungsarchiv",
+    "viewAll": "Alle Arbeiten",
+    "maker": "Hersteller",
+    "type": "Art der Arbeiten",
+    "scale": "Maßstab"
+  },
+  "worksPage": {
+    "back": "← Zurück zur Startseite",
+    "title": "Konvertierungsarchiv"
+  },
+  "pagination": {
+    "prev": "← Zurück",
+    "next": "Weiter →",
+    "pageOf": "Seite {page} von {total}"
+  },
+  "projectDetail": {
+    "back": "← Zurück zu allen Projekten",
+    "worksTitle": "Durchgeführte Arbeiten",
+    "allProjects": "Alle Projekte",
+    "prevProject": "← Vorheriges Projekt",
+    "nextProject": "Nächstes Projekt →"
+  },
+  "contact": {
+    "label": "Kontakt",
+    "title": "Haben Sie ein Modell zum Aufrüsten?",
+    "bodyLine1": "Erzählen Sie uns von Ihrem Modell. Wir bewerten seine Konstruktion, schlagen die optimale Konvertierungsvariante vor und erklären ehrlich, welche Arbeiten in Ihrem Fall sinnvoll sind.",
+    "bodyLine2": "Wir arbeiten mit Modellen aus der gesamten Ukraine, mit Ausnahme der vorübergehend besetzten Gebiete. Modelle werden zuverlässig per Kurierdienst angenommen und versandt.",
+    "quote": "Nach einer gelungenen Konvertierung möchte man manchmal etwas Unerwartetes tun — den Sound abschalten. Und einfach genießen, wie leise und geschmeidig sich das Modell bewegt.",
+    "ctaEmail": "Schreiben Sie uns",
+    "ctaPhone": "Anrufen"
+  },
+  "footer": {
+    "about": "Über uns",
+    "services": "Leistungen",
+    "work": "Arbeiten",
+    "contact": "Kontakt",
+    "copy": "© 2026 Railway Atelier"
+  }
+}
