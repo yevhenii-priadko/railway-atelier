@@ -21,6 +21,7 @@ export default function Gallery({ locale, dict }: { locale: Locale; dict: Dictio
         <p className="section-label">{dict.work.label}</p>
         <h2 className="section-title">{dict.work.title}</h2>
       </div>
+      <Pagination locale={locale} dict={dict} page={1} totalPages={totalPages} variant="top" />
       <div className="gallery-grid">
         {featured.map((project) => (
           <ProjectCard key={project.slug} project={project} locale={locale} />
