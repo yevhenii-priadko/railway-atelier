@@ -153,11 +153,37 @@ body {
   opacity: 0.7;
 }
 
-/* On narrow phones, logo + "Написати нам" + UA/EN/DE don't all fit on
-   one fixed-height nav row and DE gets clipped off-screen. The language
-   switcher matters more here than the contact shortcut (still reachable
-   via the Contact section/footer), so drop it first. */
+/* On narrow phones, logo + "Написати нам"/"Kontakt aufnehmen" + UA/EN/DE
+   don't all fit on one fixed-height nav row — DE ("Kontakt aufnehmen") is
+   the long pole. Rather than dropping the contact shortcut, shrink the
+   logo, the contact label and the locale switcher just enough that all
+   three keep fitting, in every language, down to real-world phone widths. */
 @media (max-width: 400px) {
+  .site-nav {
+    padding: 0 14px;
+  }
+  .nav-logo img {
+    width: 100px;
+  }
+  .nav-contact {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+  .locale-switcher {
+    gap: 0;
+    margin-left: 6px;
+  }
+  .locale-link {
+    padding: 4px 3px;
+  }
+}
+
+/* Below ~340px (very old/small phones, e.g. first-gen iPhone SE) even the
+   shrunk layout above cannot fit "Kontakt aufnehmen" without clipping.
+   That screen size is now vanishingly rare, so on it alone we fall back
+   to hiding the contact shortcut (still reachable via the Contact section
+   further down the page, and via the footer). */
+@media (max-width: 340px) {
   .nav-contact {
     display: none;
   }
@@ -569,7 +595,7 @@ footer {
   padding: 36px 20px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 20px;
 }
 .footer-logo {
@@ -589,6 +615,7 @@ footer {
 .footer-links {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 14px;
   list-style: none;
 }
@@ -602,6 +629,25 @@ footer {
 }
 .footer-links a:hover {
   color: var(--tiffany);
+}
+
+/* Below the 768px breakpoint the footer stacks in a single column (see
+   the base `footer` rule above), but `.footer-bottom-row` itself had no
+   layout of its own there, so the links list and the copyright line fell
+   back to block-level flow and stuck to the left edge instead of
+   following the rest of the footer to center. Give it the same
+   column-and-center treatment only on this range, so the row layout used
+   from 768px up (see below) is untouched. */
+@media (max-width: 767px) {
+  footer {
+    text-align: center;
+  }
+  .footer-bottom-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
 }
 
 /* ══════════════════════════════
@@ -1219,8 +1265,17 @@ footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 16px;
+  /* Prev/Next must never separate onto their own line — only the page
+     number list (below) is allowed to wrap. With flex-wrap: wrap here,
+     whichever of the three items didn't fit on the row (Prev, the page
+     list, or Next) dropped down on its own, and since Prev/Next width
+     depends on the localized label ("← Попередня" is noticeably wider
+     than "← Zurück"/"← Previous"), UK wrapped to 3 lines on narrow
+     phones while EN/DE stayed on one — same code, different layout per
+     language. Pinning the outer row to nowrap makes Prev/Next behave
+     identically across languages and screen widths. */
+  flex-wrap: nowrap;
+  gap: 8px;
   padding: 24px 0;
   border-top: 1px solid var(--rule);
 }
@@ -1239,7 +1294,9 @@ footer {
   color: var(--dark);
   text-decoration: none;
   border: 1.5px solid var(--dark);
-  padding: 10px 22px;
+  padding: 10px 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.2s;
 }
 .pagination-link:hover {
@@ -1254,7 +1311,9 @@ footer {
   text-transform: uppercase;
   color: var(--rule);
   border: 1.5px solid var(--rule);
-  padding: 10px 22px;
+  padding: 10px 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .pagination-status {
   font-family: 'DM Mono', monospace;
@@ -1264,8 +1323,11 @@ footer {
 }
 .pagination-pages {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  row-gap: 8px;
 }
 .pagination-page {
   font-family: 'DM Mono', monospace;
