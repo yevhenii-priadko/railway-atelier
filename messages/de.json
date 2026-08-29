@@ -61,7 +61,8 @@
     "viewAll": "Alle Arbeiten",
     "maker": "Hersteller",
     "type": "Art der Arbeiten",
-    "scale": "Maßstab"
+    "scale": "Maßstab",
+    "comingSoon": "Neue Arbeit folgt bald"
   },
   "worksPage": {
     "back": "← Zurück zur Startseite",

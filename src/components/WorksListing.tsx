@@ -34,7 +34,7 @@ export default function WorksListing({
         <Pagination locale={locale} dict={dict} page={page} totalPages={totalPages} variant="top" />
         <div className="works-grid">
           {items.map((project) => (
-            <ProjectCard key={project.slug} project={project} locale={locale} />
+            <ProjectCard key={project.slug} project={project} locale={locale} dict={dict} />
           ))}
         </div>
         <Pagination locale={locale} dict={dict} page={page} totalPages={totalPages} />

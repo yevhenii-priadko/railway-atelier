@@ -552,6 +552,35 @@ body {
   padding: 2px 6px;
 }
 
+/* Temporary "coming soon" stub — see PLACEHOLDER_COUNT in
+   src/data/projects.ts. Same footprint as a real .gallery-card so the
+   grid doesn't reflow, but visually unmistakably empty: dashed border,
+   no hover lift, not a link. */
+.gallery-card-placeholder {
+  border-style: dashed;
+  border-color: var(--tiffany-light);
+  cursor: default;
+}
+.gallery-card-placeholder:hover {
+  box-shadow: none;
+  transform: none;
+}
+.gallery-card-placeholder-img {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tiffany-pale);
+  color: var(--tiffany-light);
+}
+.gallery-card-placeholder-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--mid);
+  text-align: center;
+  line-height: 1.5;
+}
+
 /* ══════════════════════════════
    CONTACT — мобільний базовий
 ══════════════════════════════ */
@@ -1262,22 +1291,45 @@ footer {
    PAGINATION (added for Next.js port)
 ══════════════════════════════ */
 .pagination {
-  display: flex;
+  /* Grid instead of flex so Prev/Next and the page-number list each get
+     their own dedicated area, independent of DOM order or how many page
+     tokens there are. This fixes two distinct problems that both showed
+     up as "wrapping" symptoms with a flex layout:
+     1) Prev/Next used to sometimes drop onto their own line, because
+        their width depends on the localized label ("← Попередня" is
+        noticeably wider than "← Zurück"/"← Previous") — see BUG-006.
+     2) Once the archive grew and pagination started collapsing pages
+        into "…" (see getPageTokens in Pagination.tsx), the page-number
+        list could get squeezed into the narrow leftover space between
+        two nowrap Prev/Next buttons on mobile and wrap into an ugly
+        2-wide column instead of spreading across the row.
+     Giving .pagination-pages its own full-width grid row on mobile
+     avoids both: Prev/Next always sit in their own row below, and the
+     page numbers always get the full row width to wrap into. */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    "pages pages"
+    "prev  next";
+  column-gap: 8px;
+  row-gap: 14px;
   align-items: center;
-  justify-content: center;
-  /* Prev/Next must never separate onto their own line — only the page
-     number list (below) is allowed to wrap. With flex-wrap: wrap here,
-     whichever of the three items didn't fit on the row (Prev, the page
-     list, or Next) dropped down on its own, and since Prev/Next width
-     depends on the localized label ("← Попередня" is noticeably wider
-     than "← Zurück"/"← Previous"), UK wrapped to 3 lines on narrow
-     phones while EN/DE stayed on one — same code, different layout per
-     language. Pinning the outer row to nowrap makes Prev/Next behave
-     identically across languages and screen widths. */
-  flex-wrap: nowrap;
-  gap: 8px;
   padding: 24px 0;
   border-top: 1px solid var(--rule);
+}
+.pagination > .pagination-pages {
+  grid-area: pages;
+  justify-self: center;
+}
+.pagination > .pagination-link:first-child,
+.pagination > .pagination-disabled:first-child {
+  grid-area: prev;
+  justify-self: start;
+}
+.pagination > .pagination-link:last-child,
+.pagination > .pagination-disabled:last-child {
+  grid-area: next;
+  justify-self: end;
 }
 .pagination-top {
   border-top: none;
@@ -1353,6 +1405,18 @@ footer {
   border-color: var(--tiffany);
   box-shadow: 0 2px 10px rgba(10, 186, 181, 0.35);
 }
+.pagination-ellipsis {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mid);
+  min-width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
 
 @media screen and (min-width: 768px) {
   .works-page {
@@ -1361,6 +1425,12 @@ footer {
   .works-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
+  }
+  .pagination {
+    /* Back to a single row once there's room: Prev — page numbers — Next. */
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: "prev pages next";
+    row-gap: 0;
   }
 }
 

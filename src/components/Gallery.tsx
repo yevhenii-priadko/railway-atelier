@@ -24,7 +24,7 @@ export default function Gallery({ locale, dict }: { locale: Locale; dict: Dictio
       <Pagination locale={locale} dict={dict} page={1} totalPages={totalPages} variant="top" />
       <div className="gallery-grid">
         {featured.map((project) => (
-          <ProjectCard key={project.slug} project={project} locale={locale} />
+          <ProjectCard key={project.slug} project={project} locale={locale} dict={dict} />
         ))}
       </div>
       <Pagination locale={locale} dict={dict} page={1} totalPages={totalPages} />

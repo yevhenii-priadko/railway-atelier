@@ -61,7 +61,8 @@
     "viewAll": "All works",
     "maker": "Maker",
     "type": "Work type",
-    "scale": "Scale"
+    "scale": "Scale",
+    "comingSoon": "New work coming soon"
   },
   "worksPage": {
     "back": "← Back to homepage",

@@ -18,6 +18,24 @@ export interface Project {
   translations: Record<Locale, ProjectTranslation>;
 }
 
+/**
+ * A gallery slot with no real project behind it yet — no photos, no
+ * detail page, not clickable. Exists purely so the pagination/gallery can
+ * be built and tested against a realistic production-sized archive (see
+ * PLACEHOLDER_COUNT below) instead of just the 6 finished conversions.
+ * ProjectCard renders this as a distinct "coming soon" stub card.
+ */
+export interface PlaceholderSlot {
+  slug: string;
+  placeholder: true;
+}
+
+export type WorksItem = Project | PlaceholderSlot;
+
+export function isPlaceholder(item: WorksItem): item is PlaceholderSlot {
+  return "placeholder" in item;
+}
+
 // Single source of truth for the "Роботи" / Works portfolio, ported from
 // the six static project pages in /projects/*.html. Order here defines
 // both the gallery/pagination order and the prev/next chain on project
@@ -331,13 +349,30 @@ export const projects: Project[] = [
 
 export const PROJECTS_PER_PAGE = 4;
 
-export function getTotalWorkPages(): number {
-  return Math.max(1, Math.ceil(projects.length / PROJECTS_PER_PAGE));
+// Temporary placeholder slots, appended after the real projects, so the
+// gallery/pagination can be exercised at a realistic ~production page
+// count (32 items / 4 per page = 8 pages) instead of just today's 6 real
+// conversions (2 pages) — see chat: too few pages to trust the pagination
+// fixes, and the client wants to see how an 8-page archive actually
+// behaves before more real work gets added. Delete this block (and
+// PLACEHOLDER_COUNT) once there are enough real projects to not need it.
+const PLACEHOLDER_COUNT = 26; // 6 real + 26 placeholder = 32 total
+const placeholderSlots: PlaceholderSlot[] = Array.from({ length: PLACEHOLDER_COUNT }, (_, i) => ({
+  slug: `placeholder-${i + 1}`,
+  placeholder: true,
+}));
+
+function getAllWorksItems(): WorksItem[] {
+  return [...projects, ...placeholderSlots];
 }
 
-export function getProjectsForPage(page: number): Project[] {
+export function getTotalWorkPages(): number {
+  return Math.max(1, Math.ceil(getAllWorksItems().length / PROJECTS_PER_PAGE));
+}
+
+export function getProjectsForPage(page: number): WorksItem[] {
   const start = (page - 1) * PROJECTS_PER_PAGE;
-  return projects.slice(start, start + PROJECTS_PER_PAGE);
+  return getAllWorksItems().slice(start, start + PROJECTS_PER_PAGE);
 }
 
 export function getProjectBySlug(slug: string): Project | undefined {
