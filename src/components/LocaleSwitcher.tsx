@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { locales, localeNames, type Locale } from "@/i18n/config";
+import { locales, type Locale } from "@/i18n/config";
+
+// Flags instead of text labels (UA/EN/DE) — an experiment Eugene asked for:
+// small semi-transparent circular badges that go fully opaque on hover/
+// active, rather than mono/uppercase text links. Full language names are
+// kept for screen readers and the hover tooltip via aria-label/title.
+const LOCALE_FLAG: Record<Locale, string> = { uk: "🇺🇦", en: "🇬🇧", de: "🇩🇪" };
+const LOCALE_FULL_NAME: Record<Locale, string> = { uk: "Українська", en: "English", de: "Deutsch" };
 
 /**
  * Swaps only the locale segment of the current path, so switching
@@ -15,17 +22,17 @@ export default function LocaleSwitcher({
 }) {
   return (
     <div className="locale-switcher">
-      {locales.map((l, i) => (
-        <span key={l} style={{ display: "contents" }}>
-          {i > 0 && <span className="locale-sep">/</span>}
-          <Link
-            href={`/${l}${pathWithoutLocale}`}
-            className="locale-link"
-            aria-current={l === locale}
-          >
-            {localeNames[l]}
-          </Link>
-        </span>
+      {locales.map((l) => (
+        <Link
+          key={l}
+          href={`/${l}${pathWithoutLocale}`}
+          className="locale-link"
+          aria-current={l === locale}
+          aria-label={LOCALE_FULL_NAME[l]}
+          title={LOCALE_FULL_NAME[l]}
+        >
+          <span aria-hidden="true">{LOCALE_FLAG[l]}</span>
+        </Link>
       ))}
     </div>
   );

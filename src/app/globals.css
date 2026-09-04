@@ -1213,29 +1213,29 @@ footer {
 .locale-switcher {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   margin-left: 8px;
 }
 .locale-link {
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--tiffany-pale);
+  font-size: 14px;
+  line-height: 1;
   text-decoration: none;
-  color: var(--mid);
-  padding: 4px 6px;
-  transition: color 0.2s;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.15s;
 }
 .locale-link:hover {
-  color: var(--tiffany);
+  opacity: 1;
+  transform: scale(1.08);
 }
 .locale-link[aria-current='true'] {
-  color: var(--dark);
-  font-weight: 500;
-}
-.locale-sep {
-  color: var(--rule);
-  font-size: 11px;
+  opacity: 1;
 }
 
 /* ══════════════════════════════
