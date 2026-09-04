@@ -170,11 +170,12 @@ body {
     letter-spacing: 0.04em;
   }
   .locale-switcher {
-    gap: 0;
+    gap: 3px;
     margin-left: 6px;
   }
   .locale-link {
-    padding: 4px 3px;
+    width: 22px;
+    height: 22px;
   }
 }
 
@@ -1223,12 +1224,14 @@ footer {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: var(--tiffany-pale);
-  font-size: 14px;
-  line-height: 1;
+  overflow: hidden;
+  border: 1px solid var(--rule);
   text-decoration: none;
   opacity: 0.6;
   transition: opacity 0.2s, transform 0.15s;
+}
+.locale-link svg {
+  display: block;
 }
 .locale-link:hover {
   opacity: 1;
