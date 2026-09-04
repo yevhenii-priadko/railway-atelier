@@ -23,7 +23,14 @@ export function connectMongoose(): Promise<typeof mongoose> {
   }
 
   if (!global._mongooseConnPromise) {
-    global._mongooseConnPromise = mongoose.connect(MONGODB_URI, { dbName: MONGODB_DB });
+    // If the initial connection attempt fails (e.g. Atlas IP whitelist not
+    // set up yet), don't cache the rejected promise forever — clear it so
+    // the next request tries again instead of failing until the process
+    // restarts.
+    global._mongooseConnPromise = mongoose.connect(MONGODB_URI, { dbName: MONGODB_DB }).catch((err) => {
+      global._mongooseConnPromise = undefined;
+      throw err;
+    });
   }
   return global._mongooseConnPromise;
 }
