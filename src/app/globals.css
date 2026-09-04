@@ -174,8 +174,8 @@ body {
     margin-left: 6px;
   }
   .locale-link {
-    width: 22px;
-    height: 22px;
+    width: 17px;
+    height: 17px;
   }
 }
 
@@ -1199,27 +1199,28 @@ footer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   overflow: hidden;
   border: 1px solid var(--rule);
   text-decoration: none;
-  /* Anton asked for these to sit in the background rather than jump out —
-     resting state is faded to ~40% opacity; hover/current locale brighten
-     but stop short of full saturation so they stay unobtrusive. */
-  opacity: 0.4;
+  /* Anton asked twice for these to fade further into the background, and
+     Eugene felt the badges themselves read as oversized at 26px — sized
+     and faded down again: resting state ~28% opacity, hover/current
+     locale brighten but still stop short of full saturation. */
+  opacity: 0.28;
   transition: opacity 0.2s, transform 0.15s;
 }
 .locale-link svg {
   display: block;
 }
 .locale-link:hover {
-  opacity: 0.75;
+  opacity: 0.6;
   transform: scale(1.08);
 }
 .locale-link[aria-current='true'] {
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
 /* ══════════════════════════════
