@@ -1,20 +1,18 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { locales, hasLocale } from "@/i18n/config";
+import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
-import { projects, getProjectBySlug, getProjectNeighbors } from "@/data/projects";
+import { getWorkBySlug, getWorkNeighbors } from "@/lib/works";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 
-// One static page per project x per locale. The prev/next chain below is
-// derived from the order of `projects` in src/data/projects.ts, so it can
-// never desync the way the old hand-edited HTML links did (BUG-001 /
-// BUG-002 in bug-report-002.docx): reordering or adding a project just
-// means editing that one array.
-export function generateStaticParams() {
-  return locales.flatMap((locale) => projects.map((p) => ({ locale, slug: p.slug })));
-}
+// Rendered dynamically now (data lives in MongoDB, editable from /admin —
+// no build-time list of slugs to pre-render). The prev/next chain below is
+// still derived from stored order (sortOrder in Mongo, edited via the
+// reorder buttons in /admin), so it still can't desync the way the old
+// hand-edited HTML links did (BUG-001 / BUG-002 in bug-report-002.docx).
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -23,7 +21,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!hasLocale(locale)) return {};
-  const project = getProjectBySlug(slug);
+  const project = await getWorkBySlug(slug);
   if (!project) return {};
   const t = project.translations[locale];
   return { title: `${t.title} · Railway Atelier` };
@@ -37,12 +35,12 @@ export default async function ProjectPage({
   const { locale, slug } = await params;
   if (!hasLocale(locale)) notFound();
 
-  const project = getProjectBySlug(slug);
+  const project = await getWorkBySlug(slug);
   if (!project) notFound();
 
   const dict = await getDictionary(locale);
   const t = project.translations[locale];
-  const { prev, next } = getProjectNeighbors(slug);
+  const { prev, next } = await getWorkNeighbors(slug);
 
   return (
     <>
@@ -62,12 +60,12 @@ export default async function ProjectPage({
 
           <div className="project-photos">
             <img
-              src={project.images[0]}
+              src={project.photos[0]}
               alt={t.photoAlts[0]}
               className="project-photo project-photo-main"
             />
-            <img src={project.images[1]} alt={t.photoAlts[1]} className="project-photo" />
-            <img src={project.images[2]} alt={t.photoAlts[2]} className="project-photo" />
+            <img src={project.photos[1]} alt={t.photoAlts[1]} className="project-photo" />
+            <img src={project.photos[2]} alt={t.photoAlts[2]} className="project-photo" />
           </div>
 
           <div className="project-works">

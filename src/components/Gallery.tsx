@@ -1,20 +1,20 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
-import { getProjectsForPage, getTotalWorkPages } from "@/data/projects";
+import { getWorksForPage, getTotalWorkPages } from "@/lib/works";
 import ProjectCard from "./ProjectCard";
 import Pagination from "./Pagination";
 
 /**
- * Homepage teaser: shows page 1 of the portfolio (the same static data
- * used for full pagination on /works/) with a link through to the full,
- * paginated archive. Pagination controls are repeated here (not just on
- * /works/) so visitors can jump straight to page 2+ without first
- * clicking through to the archive.
+ * Homepage teaser: shows page 1 of the portfolio — now read from MongoDB
+ * instead of a hardcoded array, so a work Anton adds in /admin shows up
+ * here immediately — with a link through to the full, paginated archive.
+ * Pagination controls are repeated here (not just on /works/) so visitors
+ * can jump straight to page 2+ without first clicking through to the
+ * archive.
  */
-export default function Gallery({ locale, dict }: { locale: Locale; dict: Dictionary }) {
-  const featured = getProjectsForPage(1);
-  const totalPages = getTotalWorkPages();
+export default async function Gallery({ locale, dict }: { locale: Locale; dict: Dictionary }) {
+  const [featured, totalPages] = await Promise.all([getWorksForPage(1), getTotalWorkPages()]);
   return (
     <section className="gallery" id="work">
       <div className="gallery-header">

@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
-import { getProjectsForPage, getTotalWorkPages } from "@/data/projects";
+import { getWorksForPage, getTotalWorkPages } from "@/lib/works";
 import Nav from "./Nav";
 import Footer from "./Footer";
 import ProjectCard from "./ProjectCard";
 import Pagination from "./Pagination";
 
-export default function WorksListing({
+export default async function WorksListing({
   locale,
   dict,
   page,
@@ -16,8 +16,7 @@ export default function WorksListing({
   dict: Dictionary;
   page: number;
 }) {
-  const totalPages = getTotalWorkPages();
-  const items = getProjectsForPage(page);
+  const [totalPages, items] = await Promise.all([getTotalWorkPages(), getWorksForPage(page)]);
   const pathWithoutLocale = page === 1 ? "/works/" : `/works/page/${page}/`;
 
   return (

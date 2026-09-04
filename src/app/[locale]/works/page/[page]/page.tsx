@@ -1,18 +1,13 @@
 import { notFound } from "next/navigation";
-import { locales, hasLocale } from "@/i18n/config";
+import { hasLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
-import { getTotalWorkPages } from "@/data/projects";
+import { getTotalWorkPages } from "@/lib/works";
 import WorksListing from "@/components/WorksListing";
 
-// Pre-render one static route per locale for every page number from 2 up
-// to the last page (page 1 has its own route at /[locale]/works/). This
-// is the "pagination without a backend" piece: the page list is computed
-// once at build time from the static `projects` array in src/data.
-export function generateStaticParams() {
-  const totalPages = getTotalWorkPages();
-  const pages = Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) => String(i + 2));
-  return locales.flatMap((locale) => pages.map((page) => ({ locale, page })));
-}
+// Rendered dynamically now (data lives in MongoDB and changes whenever
+// Anton adds/edits/removes a work in /admin — no rebuild, so no
+// generateStaticParams / pre-rendering here anymore).
+export const dynamic = "force-dynamic";
 
 export default async function WorksPaginatedPage({
   params,
@@ -22,7 +17,7 @@ export default async function WorksPaginatedPage({
   const { locale, page: pageParam } = await params;
   if (!hasLocale(locale)) notFound();
 
-  const totalPages = getTotalWorkPages();
+  const totalPages = await getTotalWorkPages();
   const page = Number(pageParam);
   if (!Number.isInteger(page) || page < 2 || page > totalPages) notFound();
 

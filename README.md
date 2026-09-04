@@ -1,57 +1,79 @@
-# Railway Atelier — Next.js port
+# Railway Atelier — Next.js + MongoDB backend
 
-Static-export port of the original GitHub Pages site (`index.html` + `/projects/*.html`) to Next.js (App Router), with pagination and 3 languages — all computed at build time, no backend/API involved.
+Next.js 16 (App Router, TypeScript) site with 3 languages. The works/conversions archive is now backed by MongoDB instead of a hardcoded array, with a small password-protected `/admin` panel so new works can be added without touching code or redeploying.
 
-## What changed vs. the old site
+## What changed vs. the static-export version
 
-- **Framework**: plain HTML/CSS → Next.js 16 (App Router, TypeScript), `output: 'export'`. `next build` produces a static `out/` folder — deployable anywhere (GitHub Pages, Netlify, S3, Vercel, etc.), same as before.
-- **Pagination without a backend**: all 6 works/projects live in `src/data/projects.ts`. `generateStaticParams` reads that array at build time and pre-renders one HTML page per gallery page (`/works/`, `/works/page/2/`, …) and one per project. Add a 7th project to the array and `npm run build` produces the extra page automatically — no server, no API route.
-- **3 languages (uk / en / de)**: every route is nested under `/[locale]/`. UI copy lives in `messages/{uk,en,de}.json`; per-project copy (title, works list, summary) lives inline in `src/data/projects.ts` under `translations.{uk,en,de}`. `/` redirects to `/uk/` (the default locale) since a static host can't do a real server-side redirect.
-- **Fixes BUG-001 / BUG-002** from `bug-report-002.docx`: prev/next project links were hand-written per HTML file and could desync. They're now derived automatically from the order of `projects` in `src/data/projects.ts`.
-- **Addresses RESEARCH-001 / RESEARCH-002**: every page is pre-rendered to full static HTML (visible in "view source", no client JS required to see content), and `robots.txt` explicitly allows `GPTBot`, `OAI-SearchBot`, and `ClaudeBot`, same as the site's existing `robots.txt`.
-- All copy, colors, fonts and layout (`styles.css`) were carried over as-is into `src/app/globals.css` — only pagination and the language switcher are new additions, marked as such in the CSS.
+- **No longer a static export.** `next build` + `next start` now run as a real Node.js server (e.g. on Render), because the works archive reads from MongoDB on every request and `/admin` needs server-side sessions and file uploads. Everything else — layout, copy, styling — is unchanged.
+- **Works archive → MongoDB (via Mongoose).** The 6 original conversions that used to live in `src/data/projects.ts` are now documents in a `works` collection, modeled with a Mongoose schema (`src/models/Work.ts`) and queried from `src/lib/works.ts`. Pagination, the homepage teaser, and project detail pages all read from there; the page-size and page-token logic is identical to before, just driven by real data instead of a static array + padding placeholders.
+- **`/admin` panel.** A single shared password (`ADMIN_PASSWORD`) protects `/admin`. From there you can add a work (maker/article/scale, title/type/works-list/summary in uk/en/de, 3 photos), edit or delete an existing one, and reorder the archive with up/down buttons. No user accounts, no roles — see `src/lib/session.ts` for the (deliberately minimal) auth.
+- **Photo uploads** go into MongoDB via GridFS (`src/lib/gridfs.ts`) and are served from `/api/images/[id]`. The 6 seeded works keep pointing at their original files in `/public/images/` — nothing to migrate there.
+- **3 languages (uk / en / de)** unchanged: UI copy in `messages/{uk,en,de}.json`, per-work copy in the `translations.{uk,en,de}` field of each Mongo document.
 
-## Before you deploy
+## Environment variables
 
-1. **Set the real site URL** for the sitemap: create `.env.production` (or set the env var in your host) with
-   ```
-   NEXT_PUBLIC_SITE_URL=https://your-real-domain.com
-   ```
-   Without it, `sitemap.xml` and `robots.txt` fall back to `https://example.com`.
-2. **If deploying to a GitHub Pages *project* page again** (i.e. `username.github.io/repo-name/`, not a custom domain), set `NEXT_BASE_PATH=/repo-name` at build time so links and assets get the right prefix. Skip this for a custom domain or root deployment (Vercel, Netlify, GitHub Pages user site).
-3. **Have the EN/DE copy proof-read** by a native speaker before publishing. The English and German text in `messages/en.json`, `messages/de.json`, and the `translations.en` / `translations.de` blocks in `src/data/projects.ts` was translated for this migration and is understandable and accurate, but wasn't reviewed by a native speaker of either language — worth a pass, especially for German, before it goes live.
+Copy `.env.example` to `.env.local` for local dev, or set these on the host in production:
+
+| Variable | Purpose |
+|---|---|
+| `MONGODB_URI` | MongoDB connection string (Atlas free tier is fine) |
+| `MONGODB_DB` | Database name (defaults to `railway_atelier`) |
+| `ADMIN_PASSWORD` | The one password that unlocks `/admin` |
+| `SESSION_SECRET` | Random string used to sign the login cookie (`openssl rand -hex 32`) |
+| `NEXT_PUBLIC_SITE_URL` | Real production domain, used in `sitemap.xml`/`robots.txt` |
 
 ## Commands
 
 ```bash
 npm install
 npm run dev      # local dev server at http://localhost:3000
-npm run build    # builds the static site into ./out
+npm run build    # production build (Node server, not a static export anymore)
+npm start        # run the production server
+npm run seed     # one-off: populate MongoDB with the original 6 works
 ```
 
-Serving `out/` locally to double check the export:
+Seeding a fresh database:
 
 ```bash
-npx serve out
+MONGODB_URI="mongodb+srv://..." npm run seed
 ```
+
+Safe to re-run — it skips any slug that already exists rather than duplicating it.
+
+## Deploying
+
+This needs a Node.js host now (not a static file host like GitHub Pages) — Render works well:
+
+1. Create a MongoDB Atlas cluster (free tier is enough for this) and grab its connection string.
+2. Create a Render Web Service pointed at this repo — build command `npm install && npm run build`, start command `npm start`.
+3. Set the environment variables above on that service.
+4. Run `npm run seed` once (locally, pointed at the Atlas connection string) to load the original 6 works.
+5. If moving off a GitHub Pages *project* page (`username.github.io/repo-name/`), drop `NEXT_BASE_PATH` — it's no longer needed once you're not deploying under a sub-path.
 
 ## Project structure
 
 ```
-messages/                 UI copy per locale (uk.json, en.json, de.json)
-src/data/projects.ts       The 6 portfolio projects — single source of truth
-                            for the gallery, pagination and project pages
-src/i18n/                  Locale list + dictionary loader (no external
-                            i18n library — just the pattern Next.js
-                            documents for static export)
-src/components/            Nav, Hero, About, Services, Process, Gallery,
-                            Pagination, ProjectCard, Contact, Footer, etc.
-src/app/[locale]/          All real routes: homepage, /works/, /works/page/[page]/,
-                            /works/[slug]/
-src/app/robots.ts          robots.txt (GPTBot / OAI-SearchBot / ClaudeBot allowed)
-src/app/sitemap.ts         sitemap.xml (all locales × all pages)
+messages/                     UI copy per locale (uk.json, en.json, de.json)
+src/lib/work-types.ts         Shared Work/WorkTranslation TypeScript types
+src/models/Work.ts            Mongoose schema/model for a work
+src/lib/mongoose.ts           Cached Mongoose connection
+src/lib/works.ts              All Mongo queries: pagination, CRUD, reorder
+src/lib/work-form.ts          Parses the admin form's FormData into a Work
+src/lib/gridfs.ts             Stores/serves uploaded photos (GridFS)
+src/lib/session.ts            Minimal password + signed-cookie auth for /admin
+src/i18n/                     Locale list + dictionary loader
+src/components/               Nav, Hero, About, Services, Process, Gallery,
+                               Pagination, ProjectCard, Contact, Footer, etc.
+src/components/admin/         /admin UI: login form, works list, work form
+src/app/[locale]/             Public routes: homepage, /works/, /works/page/[page]/,
+                               /works/[slug]/ — all now dynamically rendered
+src/app/admin/                /admin panel (outside /[locale] — Ukrainian-only, internal tool)
+src/app/api/images/[id]/      Streams an uploaded photo out of GridFS
+src/app/robots.ts             robots.txt (GPTBot / OAI-SearchBot / ClaudeBot allowed)
+src/app/sitemap.ts            sitemap.xml (all locales × all pages, now built per-request)
+scripts/seed.mjs              One-off migration: loads the original 6 works into Mongo
 ```
 
-## Adding a 7th project
+## Adding a work from now on
 
-Add an entry to the `projects` array in `src/data/projects.ts` (slug, maker, article, scale, 3 images, and `translations.uk/en/de`). Pagination, prev/next links and the sitemap all pick it up automatically on the next `npm run build`.
+Go to `/admin`, log in with the shared password, and use "Додати роботу" — no code changes or redeploys needed. Editing `src/data/projects.ts` is no longer a thing; that file has been removed.

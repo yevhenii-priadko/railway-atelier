@@ -10,6 +10,11 @@ import Gallery from "@/components/Gallery";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 
+// The homepage embeds the Gallery teaser, which now reads from MongoDB
+// (via src/lib/works.ts) instead of a build-time array — it needs to be
+// rendered per-request, not pre-rendered at build time.
+export const dynamic = "force-dynamic";
+
 export default async function HomePage({
   params,
 }: {

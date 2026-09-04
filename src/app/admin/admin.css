@@ -1,0 +1,210 @@
+/* Admin panel — deliberately plain: this is a tool for Anton to add/edit
+   works, not a marketing page. Reuses the site's Tiffany accent so it
+   still feels like the same product, nothing more. */
+
+:root {
+  --admin-bg: #f7f7f5;
+  --admin-panel: #ffffff;
+  --admin-border: #e2e0da;
+  --admin-text: #1c1c1a;
+  --admin-mid: #6b6a64;
+  --admin-accent: #0abab5;
+  --admin-accent-dark: #089d99;
+  --admin-danger: #c0392b;
+}
+
+.admin-body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.admin-shell {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.admin-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.admin-logout {
+  background: none;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--admin-mid);
+  cursor: pointer;
+}
+.admin-logout:hover { border-color: var(--admin-danger); color: var(--admin-danger); }
+
+.admin-panel {
+  background: var(--admin-panel);
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.admin-login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.admin-login-box { width: 100%; max-width: 360px; }
+.admin-login-box h1 { font-size: 20px; margin: 0 0 20px; text-align: center; }
+
+.admin-field { margin-bottom: 18px; }
+.admin-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--admin-mid);
+}
+.admin-field input[type="text"],
+.admin-field input[type="password"],
+.admin-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  color: var(--admin-text);
+}
+.admin-field textarea { resize: vertical; min-height: 90px; }
+.admin-field input:focus,
+.admin-field textarea:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px rgba(10, 186, 181, 0.15);
+}
+.admin-hint { font-size: 12px; color: var(--admin-mid); margin-top: 4px; }
+
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--admin-accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.admin-btn:hover { background: var(--admin-accent-dark); }
+.admin-btn:disabled { opacity: 0.6; cursor: default; }
+.admin-btn-block { width: 100%; }
+.admin-btn-secondary {
+  background: none;
+  color: var(--admin-text);
+  border: 1px solid var(--admin-border);
+}
+.admin-btn-secondary:hover { background: #f0f0ee; }
+.admin-btn-danger { background: none; color: var(--admin-danger); border: 1px solid var(--admin-border); padding: 8px 12px; font-size: 13px; }
+.admin-btn-danger:hover { background: #fdf1f0; border-color: var(--admin-danger); }
+.admin-btn-icon { background: none; border: 1px solid var(--admin-border); border-radius: 6px; width: 32px; height: 32px; cursor: pointer; font-size: 14px; color: var(--admin-mid); }
+.admin-btn-icon:hover { border-color: var(--admin-accent); color: var(--admin-accent-dark); }
+.admin-btn-icon:disabled { opacity: 0.3; cursor: default; }
+
+.admin-error {
+  background: #fdf1f0;
+  border: 1px solid #f2c6c0;
+  color: var(--admin-danger);
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.admin-empty { color: var(--admin-mid); text-align: center; padding: 40px 0; }
+
+.admin-list { display: flex; flex-direction: column; gap: 10px; }
+.admin-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #fff;
+}
+.admin-card-order { display: flex; flex-direction: column; }
+.admin-card-thumb { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: #eee; }
+.admin-card-info { flex: 1; min-width: 0; }
+.admin-card-title { font-weight: 600; font-size: 14px; }
+.admin-card-meta { font-size: 12px; color: var(--admin-mid); }
+.admin-card-actions { display: flex; align-items: center; gap: 6px; }
+
+.admin-add-link { margin-bottom: 20px; display: inline-block; }
+
+.admin-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--admin-border); }
+.admin-tab {
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-mid);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.admin-tab[data-active="true"] { color: var(--admin-accent-dark); border-bottom-color: var(--admin-accent); }
+
+.admin-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 640px) { .admin-row { grid-template-columns: 1fr; } }
+
+.admin-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+@media (max-width: 640px) { .admin-photos { grid-template-columns: 1fr; } }
+.admin-photo-slot { text-align: center; }
+.admin-photo-preview {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border);
+  margin-bottom: 8px;
+  background: #eee;
+}
+.admin-photo-placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  border: 1px dashed var(--admin-border);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--admin-mid);
+  font-size: 12px;
+  background: #fafaf9;
+}
+
+.admin-form-actions { display: flex; gap: 10px; margin-top: 24px; }
+.admin-back-link { display: inline-block; margin-bottom: 16px; font-size: 13px; color: var(--admin-mid); text-decoration: none; }
+.admin-back-link:hover { color: var(--admin-accent-dark); }
