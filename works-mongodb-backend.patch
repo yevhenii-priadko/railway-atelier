@@ -1,0 +1,2567 @@
+From dbbf8e0b09023662ae14a6b0707761058b65e381 Mon Sep 17 00:00:00 2001
+From: Claude <claude@anthropic.com>
+Date: Fri, 4 Sep 2026 10:39:33 +0000
+Subject: [PATCH] Move works archive to MongoDB (via Mongoose), add /admin
+ panel
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The works/conversions archive no longer lives in a static src/data/projects.ts
+array — it's now a MongoDB collection, modeled with Mongoose (src/models/Work.ts,
+src/lib/works.ts) so it can grow without a code change or redeploy. Pagination,
+the homepage teaser and project detail pages read from Mongo; page size and
+page-token logic are unchanged, just driven by real data instead of a
+build-time array padded with placeholder cards.
+
+Adds a small password-protected /admin panel (single shared password, no
+user accounts — see src/lib/session.ts) where a non-developer can add,
+edit, delete and reorder works: maker/article/scale, title/type/works-list/
+summary per language (uk/en/de), and 3 photos per work (drag-and-drop
+upload, stored in MongoDB via GridFS and served from /api/images/[id]).
+URL slugs are generated automatically so the admin never has to think
+about one.
+
+Since content now changes at runtime, the site is no longer a static
+export: next.config.ts drops output: 'export', and every page that reads
+works data is marked force-dynamic. scripts/seed.mjs migrates the
+original 6 conversions into a fresh database (safe to re-run).
+
+See .env.example for the new required environment variables
+(MONGODB_URI, ADMIN_PASSWORD, SESSION_SECRET) and README.md for the
+updated deploy steps.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01MZzJN1gHgbXbZKKcBpweYF
+---
+ .env.example                                  |  22 ++
+ .gitignore                                    |   1 +
+ README.md                                     |  90 +++++---
+ next.config.ts                                |  19 +-
+ package-lock.json                             | 208 ++++++++++++++++-
+ package.json                                  |   7 +-
+ src/data/projects.ts => scripts/seed-data.mjs | 102 +--------
+ scripts/seed.mjs                              |  62 ++++++
+ src/app/[locale]/page.tsx                     |   5 +
+ src/app/[locale]/works/[slug]/page.tsx        |  30 ++-
+ src/app/[locale]/works/page.tsx               |   5 +
+ src/app/[locale]/works/page/[page]/page.tsx   |  19 +-
+ src/app/admin/actions.ts                      | 105 +++++++++
+ src/app/admin/admin.css                       | 210 ++++++++++++++++++
+ src/app/admin/layout.tsx                      |  18 ++
+ src/app/admin/login/page.tsx                  |  20 ++
+ src/app/admin/page.tsx                        |  31 +++
+ src/app/admin/works/[id]/edit/page.tsx        |  26 +++
+ src/app/admin/works/new/page.tsx              |  21 ++
+ src/app/api/images/[id]/route.ts              |  30 +++
+ src/app/sitemap.ts                            |  15 +-
+ src/components/Gallery.tsx                    |  18 +-
+ src/components/ProjectCard.tsx                |  32 +--
+ src/components/WorksListing.tsx               |   7 +-
+ src/components/admin/LoginForm.tsx            |  23 ++
+ src/components/admin/WorkForm.tsx             | 153 +++++++++++++
+ src/components/admin/WorksAdminList.tsx       |  97 ++++++++
+ src/lib/gridfs.ts                             |  84 +++++++
+ src/lib/mongoose.ts                           |  29 +++
+ src/lib/session.ts                            |  81 +++++++
+ src/lib/slugify.ts                            |  20 ++
+ src/lib/work-form.ts                          |  99 +++++++++
+ src/lib/work-types.ts                         |  43 ++++
+ src/lib/works.ts                              | 158 +++++++++++++
+ src/models/Work.ts                            |  55 +++++
+ 35 files changed, 1732 insertions(+), 213 deletions(-)
+ create mode 100644 .env.example
+ rename src/data/projects.ts => scripts/seed-data.mjs (79%)
+ create mode 100644 scripts/seed.mjs
+ create mode 100644 src/app/admin/actions.ts
+ create mode 100644 src/app/admin/admin.css
+ create mode 100644 src/app/admin/layout.tsx
+ create mode 100644 src/app/admin/login/page.tsx
+ create mode 100644 src/app/admin/page.tsx
+ create mode 100644 src/app/admin/works/[id]/edit/page.tsx
+ create mode 100644 src/app/admin/works/new/page.tsx
+ create mode 100644 src/app/api/images/[id]/route.ts
+ create mode 100644 src/components/admin/LoginForm.tsx
+ create mode 100644 src/components/admin/WorkForm.tsx
+ create mode 100644 src/components/admin/WorksAdminList.tsx
+ create mode 100644 src/lib/gridfs.ts
+ create mode 100644 src/lib/mongoose.ts
+ create mode 100644 src/lib/session.ts
+ create mode 100644 src/lib/slugify.ts
+ create mode 100644 src/lib/work-form.ts
+ create mode 100644 src/lib/work-types.ts
+ create mode 100644 src/lib/works.ts
+ create mode 100644 src/models/Work.ts
+
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..c5959ce
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,22 @@
++# Copy to .env.local for local development. In production (Render), set
++# these as environment variables on the web service instead of a file.
++
++# MongoDB connection string (MongoDB Atlas free tier works fine).
++# Example: mongodb+srv://user:password@cluster0.xxxxx.mongodb.net/
++MONGODB_URI=
++
++# Optional — defaults to "railway_atelier" if not set.
++MONGODB_DB=railway_atelier
++
++# The one shared password for /admin. Anton (or anyone with this password)
++# can add/edit/delete works in the archive. Pick something long and random
++# — it's compared in plain text on the server, never sent anywhere else.
++ADMIN_PASSWORD=
++
++# Random secret used to sign the /admin login cookie. Any long random
++# string works — e.g. generate one with: openssl rand -hex 32
++SESSION_SECRET=
++
++# Used to build the sitemap/robots.txt with real URLs instead of a
++# placeholder. Set to the site's real production domain.
++NEXT_PUBLIC_SITE_URL=https://example.com
+diff --git a/.gitignore b/.gitignore
+index 5ef6a52..7b8da95 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -32,6 +32,7 @@ yarn-error.log*
+ 
+ # env files (can opt-in for committing if needed)
+ .env*
++!.env.example
+ 
+ # vercel
+ .vercel
+diff --git a/README.md b/README.md
+index 79a6b75..67a7d57 100644
+--- a/README.md
++++ b/README.md
+@@ -1,57 +1,79 @@
+-# Railway Atelier — Next.js port
++# Railway Atelier — Next.js + MongoDB backend
+ 
+-Static-export port of the original GitHub Pages site (`index.html` + `/projects/*.html`) to Next.js (App Router), with pagination and 3 languages — all computed at build time, no backend/API involved.
++Next.js 16 (App Router, TypeScript) site with 3 languages. The works/conversions archive is now backed by MongoDB instead of a hardcoded array, with a small password-protected `/admin` panel so new works can be added without touching code or redeploying.
+ 
+-## What changed vs. the old site
++## What changed vs. the static-export version
+ 
+-- **Framework**: plain HTML/CSS → Next.js 16 (App Router, TypeScript), `output: 'export'`. `next build` produces a static `out/` folder — deployable anywhere (GitHub Pages, Netlify, S3, Vercel, etc.), same as before.
+-- **Pagination without a backend**: all 6 works/projects live in `src/data/projects.ts`. `generateStaticParams` reads that array at build time and pre-renders one HTML page per gallery page (`/works/`, `/works/page/2/`, …) and one per project. Add a 7th project to the array and `npm run build` produces the extra page automatically — no server, no API route.
+-- **3 languages (uk / en / de)**: every route is nested under `/[locale]/`. UI copy lives in `messages/{uk,en,de}.json`; per-project copy (title, works list, summary) lives inline in `src/data/projects.ts` under `translations.{uk,en,de}`. `/` redirects to `/uk/` (the default locale) since a static host can't do a real server-side redirect.
+-- **Fixes BUG-001 / BUG-002** from `bug-report-002.docx`: prev/next project links were hand-written per HTML file and could desync. They're now derived automatically from the order of `projects` in `src/data/projects.ts`.
+-- **Addresses RESEARCH-001 / RESEARCH-002**: every page is pre-rendered to full static HTML (visible in "view source", no client JS required to see content), and `robots.txt` explicitly allows `GPTBot`, `OAI-SearchBot`, and `ClaudeBot`, same as the site's existing `robots.txt`.
+-- All copy, colors, fonts and layout (`styles.css`) were carried over as-is into `src/app/globals.css` — only pagination and the language switcher are new additions, marked as such in the CSS.
++- **No longer a static export.** `next build` + `next start` now run as a real Node.js server (e.g. on Render), because the works archive reads from MongoDB on every request and `/admin` needs server-side sessions and file uploads. Everything else — layout, copy, styling — is unchanged.
++- **Works archive → MongoDB (via Mongoose).** The 6 original conversions that used to live in `src/data/projects.ts` are now documents in a `works` collection, modeled with a Mongoose schema (`src/models/Work.ts`) and queried from `src/lib/works.ts`. Pagination, the homepage teaser, and project detail pages all read from there; the page-size and page-token logic is identical to before, just driven by real data instead of a static array + padding placeholders.
++- **`/admin` panel.** A single shared password (`ADMIN_PASSWORD`) protects `/admin`. From there you can add a work (maker/article/scale, title/type/works-list/summary in uk/en/de, 3 photos), edit or delete an existing one, and reorder the archive with up/down buttons. No user accounts, no roles — see `src/lib/session.ts` for the (deliberately minimal) auth.
++- **Photo uploads** go into MongoDB via GridFS (`src/lib/gridfs.ts`) and are served from `/api/images/[id]`. The 6 seeded works keep pointing at their original files in `/public/images/` — nothing to migrate there.
++- **3 languages (uk / en / de)** unchanged: UI copy in `messages/{uk,en,de}.json`, per-work copy in the `translations.{uk,en,de}` field of each Mongo document.
+ 
+-## Before you deploy
++## Environment variables
+ 
+-1. **Set the real site URL** for the sitemap: create `.env.production` (or set the env var in your host) with
+-   ```
+-   NEXT_PUBLIC_SITE_URL=https://your-real-domain.com
+-   ```
+-   Without it, `sitemap.xml` and `robots.txt` fall back to `https://example.com`.
+-2. **If deploying to a GitHub Pages *project* page again** (i.e. `username.github.io/repo-name/`, not a custom domain), set `NEXT_BASE_PATH=/repo-name` at build time so links and assets get the right prefix. Skip this for a custom domain or root deployment (Vercel, Netlify, GitHub Pages user site).
+-3. **Have the EN/DE copy proof-read** by a native speaker before publishing. The English and German text in `messages/en.json`, `messages/de.json`, and the `translations.en` / `translations.de` blocks in `src/data/projects.ts` was translated for this migration and is understandable and accurate, but wasn't reviewed by a native speaker of either language — worth a pass, especially for German, before it goes live.
++Copy `.env.example` to `.env.local` for local dev, or set these on the host in production:
++
++| Variable | Purpose |
++|---|---|
++| `MONGODB_URI` | MongoDB connection string (Atlas free tier is fine) |
++| `MONGODB_DB` | Database name (defaults to `railway_atelier`) |
++| `ADMIN_PASSWORD` | The one password that unlocks `/admin` |
++| `SESSION_SECRET` | Random string used to sign the login cookie (`openssl rand -hex 32`) |
++| `NEXT_PUBLIC_SITE_URL` | Real production domain, used in `sitemap.xml`/`robots.txt` |
+ 
+ ## Commands
+ 
+ ```bash
+ npm install
+ npm run dev      # local dev server at http://localhost:3000
+-npm run build    # builds the static site into ./out
++npm run build    # production build (Node server, not a static export anymore)
++npm start        # run the production server
++npm run seed     # one-off: populate MongoDB with the original 6 works
+ ```
+ 
+-Serving `out/` locally to double check the export:
++Seeding a fresh database:
+ 
+ ```bash
+-npx serve out
++MONGODB_URI="mongodb+srv://..." npm run seed
+ ```
+ 
++Safe to re-run — it skips any slug that already exists rather than duplicating it.
++
++## Deploying
++
++This needs a Node.js host now (not a static file host like GitHub Pages) — Render works well:
++
++1. Create a MongoDB Atlas cluster (free tier is enough for this) and grab its connection string.
++2. Create a Render Web Service pointed at this repo — build command `npm install && npm run build`, start command `npm start`.
++3. Set the environment variables above on that service.
++4. Run `npm run seed` once (locally, pointed at the Atlas connection string) to load the original 6 works.
++5. If moving off a GitHub Pages *project* page (`username.github.io/repo-name/`), drop `NEXT_BASE_PATH` — it's no longer needed once you're not deploying under a sub-path.
++
+ ## Project structure
+ 
+ ```
+-messages/                 UI copy per locale (uk.json, en.json, de.json)
+-src/data/projects.ts       The 6 portfolio projects — single source of truth
+-                            for the gallery, pagination and project pages
+-src/i18n/                  Locale list + dictionary loader (no external
+-                            i18n library — just the pattern Next.js
+-                            documents for static export)
+-src/components/            Nav, Hero, About, Services, Process, Gallery,
+-                            Pagination, ProjectCard, Contact, Footer, etc.
+-src/app/[locale]/          All real routes: homepage, /works/, /works/page/[page]/,
+-                            /works/[slug]/
+-src/app/robots.ts          robots.txt (GPTBot / OAI-SearchBot / ClaudeBot allowed)
+-src/app/sitemap.ts         sitemap.xml (all locales × all pages)
++messages/                     UI copy per locale (uk.json, en.json, de.json)
++src/lib/work-types.ts         Shared Work/WorkTranslation TypeScript types
++src/models/Work.ts            Mongoose schema/model for a work
++src/lib/mongoose.ts           Cached Mongoose connection
++src/lib/works.ts              All Mongo queries: pagination, CRUD, reorder
++src/lib/work-form.ts          Parses the admin form's FormData into a Work
++src/lib/gridfs.ts             Stores/serves uploaded photos (GridFS)
++src/lib/session.ts            Minimal password + signed-cookie auth for /admin
++src/i18n/                     Locale list + dictionary loader
++src/components/               Nav, Hero, About, Services, Process, Gallery,
++                               Pagination, ProjectCard, Contact, Footer, etc.
++src/components/admin/         /admin UI: login form, works list, work form
++src/app/[locale]/             Public routes: homepage, /works/, /works/page/[page]/,
++                               /works/[slug]/ — all now dynamically rendered
++src/app/admin/                /admin panel (outside /[locale] — Ukrainian-only, internal tool)
++src/app/api/images/[id]/      Streams an uploaded photo out of GridFS
++src/app/robots.ts             robots.txt (GPTBot / OAI-SearchBot / ClaudeBot allowed)
++src/app/sitemap.ts            sitemap.xml (all locales × all pages, now built per-request)
++scripts/seed.mjs              One-off migration: loads the original 6 works into Mongo
+ ```
+ 
+-## Adding a 7th project
++## Adding a work from now on
+ 
+-Add an entry to the `projects` array in `src/data/projects.ts` (slug, maker, article, scale, 3 images, and `translations.uk/en/de`). Pagination, prev/next links and the sitemap all pick it up automatically on the next `npm run build`.
++Go to `/admin`, log in with the shared password, and use "Додати роботу" — no code changes or redeploys needed. Editing `src/data/projects.ts` is no longer a thing; that file has been removed.
+diff --git a/next.config.ts b/next.config.ts
+index 9c941cf..72c1764 100644
+--- a/next.config.ts
++++ b/next.config.ts
+@@ -1,24 +1,25 @@
+ import type { NextConfig } from "next";
+ 
+ const nextConfig: NextConfig = {
+-  // Static export: every route (all locales x all pages) is pre-rendered
+-  // to plain HTML at build time. No Node.js server is required to run
+-  // pagination or the language switcher — it all happens at `next build`.
+-  output: "export",
++  // No longer a static export: the works archive now reads from MongoDB
++  // (see src/lib/works.ts) so it can change without a rebuild, and /admin
++  // needs a real server for its login cookie + server actions. This now
++  // deploys as a Node.js server (`next build` + `next start`), e.g. on
++  // Render, rather than as a static `out/` folder.
+ 
+   // Emit /works/2/index.html instead of /works/2.html — plays nicer with
+-  // most static hosts (GitHub Pages, Netlify, S3, etc.).
++  // most hosts and keeps the same URLs as the previous static-export version.
+   trailingSlash: true,
+ 
+   // We use plain <img> tags (like the original site) instead of next/image,
+-  // so no image loader configuration is required for the static export.
++  // so no image loader configuration is required.
+   images: {
+     unoptimized: true,
+   },
+ 
+-  // If this site is deployed under a sub-path again (e.g. GitHub Pages
+-  // project pages at username.github.io/repo-name/), set NEXT_BASE_PATH
+-  // at build time and Next.js will prefix all routes and assets with it.
++  // If this site is deployed under a sub-path (e.g. GitHub Pages project
++  // pages at username.github.io/repo-name/), set NEXT_BASE_PATH at build
++  // time and Next.js will prefix all routes and assets with it.
+   basePath: process.env.NEXT_BASE_PATH || "",
+ };
+ 
+diff --git a/package-lock.json b/package-lock.json
+index 1d6b641..85b1841 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -8,6 +8,7 @@
+       "name": "precision-rail-next",
+       "version": "0.1.0",
+       "dependencies": {
++        "mongoose": "^9.9.4",
+         "next": "16.3.3",
+         "react": "19.2.8",
+         "react-dom": "19.2.8"
+@@ -19,6 +20,9 @@
+         "eslint": "^9",
+         "eslint-config-next": "16.3.3",
+         "typescript": "^5"
++      },
++      "engines": {
++        "node": ">=20"
+       }
+     },
+     "node_modules/@babel/code-frame": {
+@@ -1055,6 +1059,15 @@
+         "@jridgewell/sourcemap-codec": "^1.4.14"
+       }
+     },
++    "node_modules/@mongodb-js/saslprep": {
++      "version": "1.5.0",
++      "resolved": "https://registry.npmjs.org/@mongodb-js/saslprep/-/saslprep-1.5.0.tgz",
++      "integrity": "sha512-Hk1SKJCMcCos38+vqDnZzlIo4XRj9yCGzYkjB4LcqpeXRIYfia1UWTz+VrueLxoU+uSRJzgkufxoRZg8gi52YA==",
++      "license": "MIT",
++      "dependencies": {
++        "sparse-bitfield": "^3.0.3"
++      }
++    },
+     "node_modules/@napi-rs/wasm-runtime": {
+       "version": "1.2.3",
+       "resolved": "https://registry.npmjs.org/@napi-rs/wasm-runtime/-/wasm-runtime-1.2.3.tgz",
+@@ -1309,6 +1322,12 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/@standard-schema/spec": {
++      "version": "1.1.0",
++      "resolved": "https://registry.npmjs.org/@standard-schema/spec/-/spec-1.1.0.tgz",
++      "integrity": "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==",
++      "license": "MIT"
++    },
+     "node_modules/@swc/helpers": {
+       "version": "0.5.23",
+       "resolved": "https://registry.npmjs.org/@swc/helpers/-/helpers-0.5.23.tgz",
+@@ -1380,6 +1399,12 @@
+         "@types/react": "^19.2.0"
+       }
+     },
++    "node_modules/@types/webidl-conversions": {
++      "version": "7.0.3",
++      "resolved": "https://registry.npmjs.org/@types/webidl-conversions/-/webidl-conversions-7.0.3.tgz",
++      "integrity": "sha512-CiJJvcRtIgzadHCYXw7dqEnMNRjhGZlYK05Mj9OyktqV8uVT8fD2BFOB7S1uwBE3Kj2Z+4UyPmFw/Ixgw/LAlA==",
++      "license": "MIT"
++    },
+     "node_modules/@typescript-eslint/eslint-plugin": {
+       "version": "8.68.0",
+       "resolved": "https://registry.npmjs.org/@typescript-eslint/eslint-plugin/-/eslint-plugin-8.68.0.tgz",
+@@ -4374,6 +4399,15 @@
+         "node": ">=4.0"
+       }
+     },
++    "node_modules/kareem": {
++      "version": "3.3.0",
++      "resolved": "https://registry.npmjs.org/kareem/-/kareem-3.3.0.tgz",
++      "integrity": "sha512-kpSuLD3/7RenBnjnJdOHXCKC8dTd1JzeOiJhN0necWWci6cC+qX+VuwPnMVgb+a4+KNJSfgqahpnfWaeDXCimw==",
++      "license": "Apache-2.0",
++      "engines": {
++        "node": ">=18.0.0"
++      }
++    },
+     "node_modules/keyv": {
+       "version": "4.5.4",
+       "resolved": "https://registry.npmjs.org/keyv/-/keyv-4.5.4.tgz",
+@@ -4474,6 +4508,12 @@
+         "node": ">= 0.4"
+       }
+     },
++    "node_modules/memory-pager": {
++      "version": "1.5.0",
++      "resolved": "https://registry.npmjs.org/memory-pager/-/memory-pager-1.5.0.tgz",
++      "integrity": "sha512-ZS4Bp4r/Zoeq6+NLJpP+0Zzm0pR8whtGPf1XExKLJBAczGMnSi3It14OiNCStjQjM6NU1okjQGSxgEZN8eBYKg==",
++      "license": "MIT"
++    },
+     "node_modules/merge2": {
+       "version": "1.4.1",
+       "resolved": "https://registry.npmjs.org/merge2/-/merge2-1.4.1.tgz",
+@@ -4521,11 +4561,127 @@
+         "url": "https://github.com/sponsors/ljharb"
+       }
+     },
++    "node_modules/mongoose": {
++      "version": "9.9.4",
++      "resolved": "https://registry.npmjs.org/mongoose/-/mongoose-9.9.4.tgz",
++      "integrity": "sha512-Gc7buf0ExrOZ3t8MD8tVzTek7Qr5d+tEwj4GRFmHCtTZvpaDb38EVsXgCkYacPL9ICAftgS+FGe+dQHLRLHhcw==",
++      "license": "MIT",
++      "dependencies": {
++        "@standard-schema/spec": "^1.1.0",
++        "kareem": "3.3.0",
++        "mongodb": "~7.5",
++        "mpath": "0.9.0",
++        "mquery": "6.0.0",
++        "ms": "2.1.3",
++        "sift": "17.1.3"
++      },
++      "engines": {
++        "node": ">=20.19.0"
++      },
++      "funding": {
++        "type": "opencollective",
++        "url": "https://opencollective.com/mongoose"
++      }
++    },
++    "node_modules/mongoose/node_modules/@types/whatwg-url": {
++      "version": "13.0.0",
++      "resolved": "https://registry.npmjs.org/@types/whatwg-url/-/whatwg-url-13.0.0.tgz",
++      "integrity": "sha512-N8WXpbE6Wgri7KUSvrmQcqrMllKZ9uxkYWMt+mCSGwNc0Hsw9VQTW7ApqI4XNrx6/SaM2QQJCzMPDEXE058s+Q==",
++      "license": "MIT",
++      "dependencies": {
++        "@types/webidl-conversions": "*"
++      }
++    },
++    "node_modules/mongoose/node_modules/bson": {
++      "version": "7.3.2",
++      "resolved": "https://registry.npmjs.org/bson/-/bson-7.3.2.tgz",
++      "integrity": "sha512-1w0ra+ho1cuE+w8jzwgzTFIimFtCfZeCoOsvIPQg6uyFCsp8M29U7bNNf5GrFh88TXbYg1g3TyKUGpd6O7q6zA==",
++      "license": "Apache-2.0",
++      "engines": {
++        "node": ">=20.19.0"
++      }
++    },
++    "node_modules/mongoose/node_modules/mongodb": {
++      "version": "7.5.0",
++      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-7.5.0.tgz",
++      "integrity": "sha512-5FnrEDLnvp6ycUOGLNLLU33BfCx2qmp2mJjGPDwKLruYsVzXVSK5fsGpoDXvsXJwBfBsD7ebMRdawbDxC2814g==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@mongodb-js/saslprep": "^1.4.11",
++        "bson": "^7.2.0",
++        "mongodb-connection-string-url": "^7.0.1"
++      },
++      "engines": {
++        "node": ">=20.19.0"
++      },
++      "peerDependencies": {
++        "@aws-sdk/credential-providers": "^3.806.0",
++        "@mongodb-js/zstd": "^7.0.0",
++        "gcp-metadata": "^7.0.1",
++        "kerberos": "^7.0.0",
++        "mongodb-client-encryption": "^7.2.0",
++        "snappy": "^7.3.2",
++        "socks": "^2.8.6"
++      },
++      "peerDependenciesMeta": {
++        "@aws-sdk/credential-providers": {
++          "optional": true
++        },
++        "@mongodb-js/zstd": {
++          "optional": true
++        },
++        "gcp-metadata": {
++          "optional": true
++        },
++        "kerberos": {
++          "optional": true
++        },
++        "mongodb-client-encryption": {
++          "optional": true
++        },
++        "snappy": {
++          "optional": true
++        },
++        "socks": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/mongoose/node_modules/mongodb-connection-string-url": {
++      "version": "7.0.2",
++      "resolved": "https://registry.npmjs.org/mongodb-connection-string-url/-/mongodb-connection-string-url-7.0.2.tgz",
++      "integrity": "sha512-ZoS07RoFqpKYQwAk59qmrx8+jJHNHU30UjlU96QktiGn1ltvDr+vCznLX5DiUBLEpMAHatHNWV1nM/74ul66kA==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@types/whatwg-url": "^13.0.0",
++        "whatwg-url": "^14.1.0"
++      },
++      "engines": {
++        "node": ">=20.19.0"
++      }
++    },
++    "node_modules/mpath": {
++      "version": "0.9.0",
++      "resolved": "https://registry.npmjs.org/mpath/-/mpath-0.9.0.tgz",
++      "integrity": "sha512-ikJRQTk8hw5DEoFVxHG1Gn9T/xcjtdnOKIU1JTmGjZZlg9LST2mBLmcX3/ICIbgJydT2GOc15RnNy5mHmzfSew==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=4.0.0"
++      }
++    },
++    "node_modules/mquery": {
++      "version": "6.0.0",
++      "resolved": "https://registry.npmjs.org/mquery/-/mquery-6.0.0.tgz",
++      "integrity": "sha512-b2KQNsmgtkscfeDgkYMcWGn9vZI9YoXh802VDEwE6qc50zxBFQ0Oo8ROkawbPAsXCY1/Z1yp0MagqsZStPWJjw==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=20.19.0"
++      }
++    },
+     "node_modules/ms": {
+       "version": "2.1.3",
+       "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
+       "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
+-      "dev": true,
+       "license": "MIT"
+     },
+     "node_modules/nanoid": {
+@@ -4966,7 +5122,6 @@
+       "version": "2.3.1",
+       "resolved": "https://registry.npmjs.org/punycode/-/punycode-2.3.1.tgz",
+       "integrity": "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==",
+-      "dev": true,
+       "license": "MIT",
+       "engines": {
+         "node": ">=6"
+@@ -5426,6 +5581,12 @@
+         "url": "https://github.com/sponsors/ljharb"
+       }
+     },
++    "node_modules/sift": {
++      "version": "17.1.3",
++      "resolved": "https://registry.npmjs.org/sift/-/sift-17.1.3.tgz",
++      "integrity": "sha512-Rtlj66/b0ICeFzYTuNvX/EF1igRbbnGSvEyT79McoZa/DeGhMyC5pWKOEsZKnpkqtSeovd5FL/bjHWC3CIIvCQ==",
++      "license": "MIT"
++    },
+     "node_modules/source-map-js": {
+       "version": "1.2.1",
+       "resolved": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz",
+@@ -5435,6 +5596,15 @@
+         "node": ">=0.10.0"
+       }
+     },
++    "node_modules/sparse-bitfield": {
++      "version": "3.0.3",
++      "resolved": "https://registry.npmjs.org/sparse-bitfield/-/sparse-bitfield-3.0.3.tgz",
++      "integrity": "sha512-kvzhi7vqKTfkh0PZU+2D2PIllw2ymqJKujUcyPMd9Y75Nv4nPbGJZXNhxsgdQab2BmlDct1YnfQCguEvHr7VsQ==",
++      "license": "MIT",
++      "dependencies": {
++        "memory-pager": "^1.0.2"
++      }
++    },
+     "node_modules/stable-hash": {
+       "version": "0.0.5",
+       "resolved": "https://registry.npmjs.org/stable-hash/-/stable-hash-0.0.5.tgz",
+@@ -5703,6 +5873,18 @@
+         "node": ">=8.0"
+       }
+     },
++    "node_modules/tr46": {
++      "version": "5.1.1",
++      "resolved": "https://registry.npmjs.org/tr46/-/tr46-5.1.1.tgz",
++      "integrity": "sha512-hdF5ZgjTqgAntKkklYw0R03MG2x/bSzTtkxmIRw/sTNV8YXsCJ1tfLAX23lhxhHJlEf3CRCOCGGWw3vI3GaSPw==",
++      "license": "MIT",
++      "dependencies": {
++        "punycode": "^2.3.1"
++      },
++      "engines": {
++        "node": ">=18"
++      }
++    },
+     "node_modules/ts-api-utils": {
+       "version": "2.5.0",
+       "resolved": "https://registry.npmjs.org/ts-api-utils/-/ts-api-utils-2.5.0.tgz",
+@@ -5982,6 +6164,28 @@
+         "punycode": "^2.1.0"
+       }
+     },
++    "node_modules/webidl-conversions": {
++      "version": "7.0.0",
++      "resolved": "https://registry.npmjs.org/webidl-conversions/-/webidl-conversions-7.0.0.tgz",
++      "integrity": "sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g==",
++      "license": "BSD-2-Clause",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/whatwg-url": {
++      "version": "14.2.0",
++      "resolved": "https://registry.npmjs.org/whatwg-url/-/whatwg-url-14.2.0.tgz",
++      "integrity": "sha512-De72GdQZzNTUBBChsXueQUnPKDkg/5A5zp7pFDuQAj5UFoENpiACU0wlCvzpAGnTkj++ihpKwKyYewn/XNUbKw==",
++      "license": "MIT",
++      "dependencies": {
++        "tr46": "^5.1.0",
++        "webidl-conversions": "^7.0.0"
++      },
++      "engines": {
++        "node": ">=18"
++      }
++    },
+     "node_modules/which": {
+       "version": "2.0.2",
+       "resolved": "https://registry.npmjs.org/which/-/which-2.0.2.tgz",
+diff --git a/package.json b/package.json
+index 67ad0b6..ed17eb6 100644
+--- a/package.json
++++ b/package.json
+@@ -2,13 +2,18 @@
+   "name": "precision-rail-next",
+   "version": "0.1.0",
+   "private": true,
++  "engines": {
++    "node": ">=20"
++  },
+   "scripts": {
+     "dev": "next dev",
+     "build": "next build",
+     "start": "next start",
+-    "lint": "eslint"
++    "lint": "eslint",
++    "seed": "node scripts/seed.mjs"
+   },
+   "dependencies": {
++    "mongoose": "^9.9.4",
+     "next": "16.3.3",
+     "react": "19.2.8",
+     "react-dom": "19.2.8"
+diff --git a/src/data/projects.ts b/scripts/seed-data.mjs
+similarity index 79%
+rename from src/data/projects.ts
+rename to scripts/seed-data.mjs
+index 948863a..b4c4442 100644
+--- a/src/data/projects.ts
++++ b/scripts/seed-data.mjs
+@@ -1,53 +1,14 @@
+-import type { Locale } from "@/i18n/config";
+-
+-export interface ProjectTranslation {
+-  title: string;
+-  type: string;
+-  worksList: string[];
+-  summary: string;
+-  photoAlts: [string, string, string];
+-}
+-
+-export interface Project {
+-  /** URL slug, also used as the stable sort key for prev/next + pagination */
+-  slug: string;
+-  maker: string;
+-  article: string;
+-  scale: string;
+-  images: [string, string, string];
+-  translations: Record<Locale, ProjectTranslation>;
+-}
+-
+-/**
+- * A gallery slot with no real project behind it yet — no photos, no
+- * detail page, not clickable. Exists purely so the pagination/gallery can
+- * be built and tested against a realistic production-sized archive (see
+- * PLACEHOLDER_COUNT below) instead of just the 6 finished conversions.
+- * ProjectCard renders this as a distinct "coming soon" stub card.
+- */
+-export interface PlaceholderSlot {
+-  slug: string;
+-  placeholder: true;
+-}
+-
+-export type WorksItem = Project | PlaceholderSlot;
+-
+-export function isPlaceholder(item: WorksItem): item is PlaceholderSlot {
+-  return "placeholder" in item;
+-}
+-
+-// Single source of truth for the "Роботи" / Works portfolio, ported from
+-// the six static project pages in /projects/*.html. Order here defines
+-// both the gallery/pagination order and the prev/next chain on project
+-// detail pages — no more hand-wired links that can break (see BUG-001 /
+-// BUG-002 in bug-report-002.docx).
+-export const projects: Project[] = [
++// The original 6 conversions, carried over from the pre-MongoDB
++// src/data/projects.ts static array (now removed — see src/lib/works.ts).
++// Used only by scripts/seed.mjs to populate a fresh database; the running
++// app never imports this file.
++export const seedWorks = [
+   {
+     slug: "roco-br01",
+     maker: "Roco",
+     article: "72161",
+     scale: "HO",
+-    images: ["/images/hero-engine.jpg", "/images/train-tiffany.jpg", "/images/engine-red-train.jpg"],
++    photos: ["/images/hero-engine.jpg", "/images/train-tiffany.jpg", "/images/engine-red-train.jpg"],
+     translations: {
+       uk: {
+         title: "BR 01 — Паровоз DRG",
+@@ -98,7 +59,7 @@ export const projects: Project[] = [
+     maker: "PIKO",
+     article: "57753",
+     scale: "HO",
+-    images: ["/images/train-tiffany.jpg", "/images/engine.jpg", "/images/train1.jpg"],
++    photos: ["/images/train-tiffany.jpg", "/images/engine.jpg", "/images/train1.jpg"],
+     translations: {
+       uk: {
+         title: "DB V 60 — Тепловоз",
+@@ -149,7 +110,7 @@ export const projects: Project[] = [
+     maker: "Fleischmann",
+     article: "4340",
+     scale: "HO",
+-    images: ["/images/engine-red-train.jpg", "/images/engine.jpg", "/images/train1.jpg"],
++    photos: ["/images/engine-red-train.jpg", "/images/engine.jpg", "/images/train1.jpg"],
+     translations: {
+       uk: {
+         title: "DB E 40 — Електровоз",
+@@ -200,7 +161,7 @@ export const projects: Project[] = [
+     maker: "Arnold",
+     article: "HN9047",
+     scale: "N",
+-    images: ["/images/train1.jpg", "/images/engine.jpg", "/images/hero-engine.jpg"],
++    photos: ["/images/train1.jpg", "/images/engine.jpg", "/images/hero-engine.jpg"],
+     translations: {
+       uk: {
+         title: "BR 50 — Вантажний паровоз",
+@@ -251,7 +212,7 @@ export const projects: Project[] = [
+     maker: "Roco",
+     article: "73891",
+     scale: "HO",
+-    images: ["/images/engine.jpg", "/images/hero-engine.jpg", "/images/train1.jpg"],
++    photos: ["/images/engine.jpg", "/images/hero-engine.jpg", "/images/train1.jpg"],
+     translations: {
+       uk: {
+         title: "BR 218 — Тепловоз",
+@@ -299,7 +260,7 @@ export const projects: Project[] = [
+     maker: "Märklin",
+     article: "3021",
+     scale: "HO",
+-    images: ["/images/hero-engine.jpg", "/images/engine.jpg", "/images/train1.jpg"],
++    photos: ["/images/hero-engine.jpg", "/images/engine.jpg", "/images/train1.jpg"],
+     translations: {
+       uk: {
+         title: "DB V 200 — Тепловоз",
+@@ -346,44 +307,3 @@ export const projects: Project[] = [
+     },
+   },
+ ];
+-
+-export const PROJECTS_PER_PAGE = 4;
+-
+-// Temporary placeholder slots, appended after the real projects, so the
+-// gallery/pagination can be exercised at a realistic ~production page
+-// count (32 items / 4 per page = 8 pages) instead of just today's 6 real
+-// conversions (2 pages) — see chat: too few pages to trust the pagination
+-// fixes, and the client wants to see how an 8-page archive actually
+-// behaves before more real work gets added. Delete this block (and
+-// PLACEHOLDER_COUNT) once there are enough real projects to not need it.
+-const PLACEHOLDER_COUNT = 26; // 6 real + 26 placeholder = 32 total
+-const placeholderSlots: PlaceholderSlot[] = Array.from({ length: PLACEHOLDER_COUNT }, (_, i) => ({
+-  slug: `placeholder-${i + 1}`,
+-  placeholder: true,
+-}));
+-
+-function getAllWorksItems(): WorksItem[] {
+-  return [...projects, ...placeholderSlots];
+-}
+-
+-export function getTotalWorkPages(): number {
+-  return Math.max(1, Math.ceil(getAllWorksItems().length / PROJECTS_PER_PAGE));
+-}
+-
+-export function getProjectsForPage(page: number): WorksItem[] {
+-  const start = (page - 1) * PROJECTS_PER_PAGE;
+-  return getAllWorksItems().slice(start, start + PROJECTS_PER_PAGE);
+-}
+-
+-export function getProjectBySlug(slug: string): Project | undefined {
+-  return projects.find((p) => p.slug === slug);
+-}
+-
+-export function getProjectNeighbors(slug: string): { prev: Project | null; next: Project | null } {
+-  const index = projects.findIndex((p) => p.slug === slug);
+-  if (index === -1) return { prev: null, next: null };
+-  return {
+-    prev: index > 0 ? projects[index - 1] : null,
+-    next: index < projects.length - 1 ? projects[index + 1] : null,
+-  };
+-}
+diff --git a/scripts/seed.mjs b/scripts/seed.mjs
+new file mode 100644
+index 0000000..4a176a6
+--- /dev/null
++++ b/scripts/seed.mjs
+@@ -0,0 +1,62 @@
++// One-off migration: populates MongoDB with the 6 original conversions
++// that used to live in the static src/data/projects.ts array, so the
++// archive isn't empty the first time the site points at the database.
++// Safe to re-run — existing slugs are skipped, nothing is duplicated or
++// overwritten.
++//
++// Uses mongoose (same as the app, src/lib/mongoose.ts / src/models/Work.ts)
++// rather than a separate MongoClient, so there's only one Mongo-related
++// package in package.json.
++//
++// Usage:
++//   MONGODB_URI="mongodb+srv://..." npm run seed
++import mongoose from "mongoose";
++import { seedWorks } from "./seed-data.mjs";
++
++const uri = process.env.MONGODB_URI;
++if (!uri) {
++  console.error('MONGODB_URI is not set. Example:\n  MONGODB_URI="mongodb+srv://..." npm run seed');
++  process.exit(1);
++}
++const dbName = process.env.MONGODB_DB || "railway_atelier";
++
++async function main() {
++  await mongoose.connect(uri, { dbName });
++  // Plain collection access here (not the Work model / schema) — this is a
++  // one-off bulk insert of already-known-good data, no per-field validation
++  // needed, and it keeps this script independent of the TypeScript model.
++  const collection = mongoose.connection.db.collection("works");
++
++  await collection.createIndex({ slug: 1 }, { unique: true });
++  await collection.createIndex({ sortOrder: 1 });
++
++  const existingCount = await collection.countDocuments();
++  console.log(`Знайдено ${existingCount} робіт(и) у базі "${dbName}".`);
++
++  let inserted = 0;
++  let skipped = 0;
++  for (let i = 0; i < seedWorks.length; i++) {
++    const work = seedWorks[i];
++    const already = await collection.findOne({ slug: work.slug });
++    if (already) {
++      skipped += 1;
++      continue;
++    }
++    const now = new Date();
++    await collection.insertOne({
++      ...work,
++      sortOrder: i,
++      createdAt: now,
++      updatedAt: now,
++    });
++    inserted += 1;
++  }
++
++  console.log(`Готово: додано ${inserted}, пропущено (вже існували) ${skipped}.`);
++  await mongoose.disconnect();
++}
++
++main().catch((err) => {
++  console.error(err);
++  process.exit(1);
++});
+diff --git a/src/app/[locale]/page.tsx b/src/app/[locale]/page.tsx
+index 0dfe734..f40e046 100644
+--- a/src/app/[locale]/page.tsx
++++ b/src/app/[locale]/page.tsx
+@@ -10,6 +10,11 @@ import Gallery from "@/components/Gallery";
+ import Contact from "@/components/Contact";
+ import Footer from "@/components/Footer";
+ 
++// The homepage embeds the Gallery teaser, which now reads from MongoDB
++// (via src/lib/works.ts) instead of a build-time array — it needs to be
++// rendered per-request, not pre-rendered at build time.
++export const dynamic = "force-dynamic";
++
+ export default async function HomePage({
+   params,
+ }: {
+diff --git a/src/app/[locale]/works/[slug]/page.tsx b/src/app/[locale]/works/[slug]/page.tsx
+index b823339..bde2b0a 100644
+--- a/src/app/[locale]/works/[slug]/page.tsx
++++ b/src/app/[locale]/works/[slug]/page.tsx
+@@ -1,20 +1,18 @@
+ import Link from "next/link";
+ import type { Metadata } from "next";
+ import { notFound } from "next/navigation";
+-import { locales, hasLocale } from "@/i18n/config";
++import { hasLocale } from "@/i18n/config";
+ import { getDictionary } from "@/i18n/dictionaries";
+-import { projects, getProjectBySlug, getProjectNeighbors } from "@/data/projects";
++import { getWorkBySlug, getWorkNeighbors } from "@/lib/works";
+ import Nav from "@/components/Nav";
+ import Footer from "@/components/Footer";
+ 
+-// One static page per project x per locale. The prev/next chain below is
+-// derived from the order of `projects` in src/data/projects.ts, so it can
+-// never desync the way the old hand-edited HTML links did (BUG-001 /
+-// BUG-002 in bug-report-002.docx): reordering or adding a project just
+-// means editing that one array.
+-export function generateStaticParams() {
+-  return locales.flatMap((locale) => projects.map((p) => ({ locale, slug: p.slug })));
+-}
++// Rendered dynamically now (data lives in MongoDB, editable from /admin —
++// no build-time list of slugs to pre-render). The prev/next chain below is
++// still derived from stored order (sortOrder in Mongo, edited via the
++// reorder buttons in /admin), so it still can't desync the way the old
++// hand-edited HTML links did (BUG-001 / BUG-002 in bug-report-002.docx).
++export const dynamic = "force-dynamic";
+ 
+ export async function generateMetadata({
+   params,
+@@ -23,7 +21,7 @@ export async function generateMetadata({
+ }): Promise<Metadata> {
+   const { locale, slug } = await params;
+   if (!hasLocale(locale)) return {};
+-  const project = getProjectBySlug(slug);
++  const project = await getWorkBySlug(slug);
+   if (!project) return {};
+   const t = project.translations[locale];
+   return { title: `${t.title} · Railway Atelier` };
+@@ -37,12 +35,12 @@ export default async function ProjectPage({
+   const { locale, slug } = await params;
+   if (!hasLocale(locale)) notFound();
+ 
+-  const project = getProjectBySlug(slug);
++  const project = await getWorkBySlug(slug);
+   if (!project) notFound();
+ 
+   const dict = await getDictionary(locale);
+   const t = project.translations[locale];
+-  const { prev, next } = getProjectNeighbors(slug);
++  const { prev, next } = await getWorkNeighbors(slug);
+ 
+   return (
+     <>
+@@ -62,12 +60,12 @@ export default async function ProjectPage({
+ 
+           <div className="project-photos">
+             <img
+-              src={project.images[0]}
++              src={project.photos[0]}
+               alt={t.photoAlts[0]}
+               className="project-photo project-photo-main"
+             />
+-            <img src={project.images[1]} alt={t.photoAlts[1]} className="project-photo" />
+-            <img src={project.images[2]} alt={t.photoAlts[2]} className="project-photo" />
++            <img src={project.photos[1]} alt={t.photoAlts[1]} className="project-photo" />
++            <img src={project.photos[2]} alt={t.photoAlts[2]} className="project-photo" />
+           </div>
+ 
+           <div className="project-works">
+diff --git a/src/app/[locale]/works/page.tsx b/src/app/[locale]/works/page.tsx
+index c4be0cc..7510808 100644
+--- a/src/app/[locale]/works/page.tsx
++++ b/src/app/[locale]/works/page.tsx
+@@ -5,6 +5,11 @@ import WorksListing from "@/components/WorksListing";
+ 
+ // Page 1 of the works archive lives at /[locale]/works/ (no page number in
+ // the URL). Pages 2+ live at /[locale]/works/page/[page]/.
++//
++// Reads from MongoDB (via WorksListing -> src/lib/works.ts) — rendered
++// per-request, not pre-rendered at build time.
++export const dynamic = "force-dynamic";
++
+ export default async function WorksPage({
+   params,
+ }: {
+diff --git a/src/app/[locale]/works/page/[page]/page.tsx b/src/app/[locale]/works/page/[page]/page.tsx
+index 2ed52f2..1c403a4 100644
+--- a/src/app/[locale]/works/page/[page]/page.tsx
++++ b/src/app/[locale]/works/page/[page]/page.tsx
+@@ -1,18 +1,13 @@
+ import { notFound } from "next/navigation";
+-import { locales, hasLocale } from "@/i18n/config";
++import { hasLocale } from "@/i18n/config";
+ import { getDictionary } from "@/i18n/dictionaries";
+-import { getTotalWorkPages } from "@/data/projects";
++import { getTotalWorkPages } from "@/lib/works";
+ import WorksListing from "@/components/WorksListing";
+ 
+-// Pre-render one static route per locale for every page number from 2 up
+-// to the last page (page 1 has its own route at /[locale]/works/). This
+-// is the "pagination without a backend" piece: the page list is computed
+-// once at build time from the static `projects` array in src/data.
+-export function generateStaticParams() {
+-  const totalPages = getTotalWorkPages();
+-  const pages = Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) => String(i + 2));
+-  return locales.flatMap((locale) => pages.map((page) => ({ locale, page })));
+-}
++// Rendered dynamically now (data lives in MongoDB and changes whenever
++// Anton adds/edits/removes a work in /admin — no rebuild, so no
++// generateStaticParams / pre-rendering here anymore).
++export const dynamic = "force-dynamic";
+ 
+ export default async function WorksPaginatedPage({
+   params,
+@@ -22,7 +17,7 @@ export default async function WorksPaginatedPage({
+   const { locale, page: pageParam } = await params;
+   if (!hasLocale(locale)) notFound();
+ 
+-  const totalPages = getTotalWorkPages();
++  const totalPages = await getTotalWorkPages();
+   const page = Number(pageParam);
+   if (!Number.isInteger(page) || page < 2 || page > totalPages) notFound();
+ 
+diff --git a/src/app/admin/actions.ts b/src/app/admin/actions.ts
+new file mode 100644
+index 0000000..6d54881
+--- /dev/null
++++ b/src/app/admin/actions.ts
+@@ -0,0 +1,105 @@
++"use server";
++
++import { cookies } from "next/headers";
++import { redirect } from "next/navigation";
++import { revalidatePath } from "next/cache";
++import {
++  ADMIN_COOKIE_NAME,
++  checkPassword,
++  createSessionToken,
++  requireAdminForAction,
++} from "@/lib/session";
++import { createWork, deleteWork, generateUniqueSlug, getWorkById, reorderWorks, updateWork } from "@/lib/works";
++import { parseWorkFields, parsePhotos } from "@/lib/work-form";
++
++export interface ActionState {
++  error?: string;
++}
++
++export async function loginAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
++  const password = String(formData.get("password") ?? "");
++
++  let ok: boolean;
++  try {
++    ok = checkPassword(password);
++  } catch (e) {
++    return { error: (e as Error).message };
++  }
++  if (!ok) {
++    return { error: "Невірний пароль." };
++  }
++
++  const store = await cookies();
++  store.set(ADMIN_COOKIE_NAME, createSessionToken(), {
++    httpOnly: true,
++    secure: process.env.NODE_ENV === "production",
++    sameSite: "lax",
++    path: "/",
++    maxAge: 60 * 60 * 24 * 30,
++  });
++  redirect("/admin");
++}
++
++export async function logoutAction(): Promise<void> {
++  const store = await cookies();
++  store.delete(ADMIN_COOKIE_NAME);
++  redirect("/admin/login");
++}
++
++function revalidatePublicPages() {
++  // Public works pages are rendered dynamically (no cache to bust in
++  // practice), but this is cheap insurance in case that ever changes.
++  revalidatePath("/[locale]", "layout");
++}
++
++export async function createWorkAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
++  await requireAdminForAction();
++
++  try {
++    const fields = parseWorkFields(formData);
++    const photos = await parsePhotos(formData, null);
++    const slug = await generateUniqueSlug(`${fields.maker}-${fields.article}`);
++    await createWork({ slug, ...fields, photos });
++  } catch (e) {
++    return { error: (e as Error).message };
++  }
++
++  revalidatePath("/admin");
++  revalidatePublicPages();
++  redirect("/admin");
++}
++
++export async function updateWorkAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
++  await requireAdminForAction();
++
++  const id = String(formData.get("workId") ?? "");
++  try {
++    const existing = await getWorkById(id);
++    if (!existing) throw new Error("Роботу не знайдено.");
++
++    const fields = parseWorkFields(formData);
++    const photos = await parsePhotos(formData, existing.photos);
++    await updateWork(id, { slug: existing.slug, ...fields, photos });
++  } catch (e) {
++    return { error: (e as Error).message };
++  }
++
++  revalidatePath("/admin");
++  revalidatePublicPages();
++  redirect("/admin");
++}
++
++export async function deleteWorkAction(formData: FormData): Promise<void> {
++  await requireAdminForAction();
++  const id = String(formData.get("id") ?? "");
++  await deleteWork(id);
++  revalidatePath("/admin");
++  revalidatePublicPages();
++}
++
++export async function reorderWorksAction(orderedIds: string[]): Promise<void> {
++  await requireAdminForAction();
++  await reorderWorks(orderedIds);
++  revalidatePath("/admin");
++  revalidatePublicPages();
++}
+diff --git a/src/app/admin/admin.css b/src/app/admin/admin.css
+new file mode 100644
+index 0000000..8943bf7
+--- /dev/null
++++ b/src/app/admin/admin.css
+@@ -0,0 +1,210 @@
++/* Admin panel — deliberately plain: this is a tool for Anton to add/edit
++   works, not a marketing page. Reuses the site's Tiffany accent so it
++   still feels like the same product, nothing more. */
++
++:root {
++  --admin-bg: #f7f7f5;
++  --admin-panel: #ffffff;
++  --admin-border: #e2e0da;
++  --admin-text: #1c1c1a;
++  --admin-mid: #6b6a64;
++  --admin-accent: #0abab5;
++  --admin-accent-dark: #089d99;
++  --admin-danger: #c0392b;
++}
++
++.admin-body {
++  margin: 0;
++  min-height: 100vh;
++  background: var(--admin-bg);
++  color: var(--admin-text);
++  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif;
++  font-size: 15px;
++  line-height: 1.5;
++}
++
++.admin-shell {
++  max-width: 880px;
++  margin: 0 auto;
++  padding: 32px 20px 80px;
++}
++
++.admin-header {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  margin-bottom: 28px;
++  gap: 16px;
++  flex-wrap: wrap;
++}
++
++.admin-title {
++  font-size: 22px;
++  font-weight: 600;
++  margin: 0;
++}
++
++.admin-logout {
++  background: none;
++  border: 1px solid var(--admin-border);
++  border-radius: 6px;
++  padding: 8px 14px;
++  font-size: 13px;
++  color: var(--admin-mid);
++  cursor: pointer;
++}
++.admin-logout:hover { border-color: var(--admin-danger); color: var(--admin-danger); }
++
++.admin-panel {
++  background: var(--admin-panel);
++  border: 1px solid var(--admin-border);
++  border-radius: 10px;
++  padding: 24px;
++}
++
++.admin-login-wrap {
++  min-height: 100vh;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  padding: 20px;
++}
++.admin-login-box { width: 100%; max-width: 360px; }
++.admin-login-box h1 { font-size: 20px; margin: 0 0 20px; text-align: center; }
++
++.admin-field { margin-bottom: 18px; }
++.admin-field label {
++  display: block;
++  font-size: 13px;
++  font-weight: 600;
++  margin-bottom: 6px;
++  color: var(--admin-mid);
++}
++.admin-field input[type="text"],
++.admin-field input[type="password"],
++.admin-field textarea {
++  width: 100%;
++  box-sizing: border-box;
++  padding: 10px 12px;
++  border: 1px solid var(--admin-border);
++  border-radius: 6px;
++  font-size: 14px;
++  font-family: inherit;
++  background: #fff;
++  color: var(--admin-text);
++}
++.admin-field textarea { resize: vertical; min-height: 90px; }
++.admin-field input:focus,
++.admin-field textarea:focus {
++  outline: none;
++  border-color: var(--admin-accent);
++  box-shadow: 0 0 0 3px rgba(10, 186, 181, 0.15);
++}
++.admin-hint { font-size: 12px; color: var(--admin-mid); margin-top: 4px; }
++
++.admin-btn {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  gap: 6px;
++  background: var(--admin-accent);
++  color: #fff;
++  border: none;
++  border-radius: 6px;
++  padding: 11px 20px;
++  font-size: 14px;
++  font-weight: 600;
++  cursor: pointer;
++}
++.admin-btn:hover { background: var(--admin-accent-dark); }
++.admin-btn:disabled { opacity: 0.6; cursor: default; }
++.admin-btn-block { width: 100%; }
++.admin-btn-secondary {
++  background: none;
++  color: var(--admin-text);
++  border: 1px solid var(--admin-border);
++}
++.admin-btn-secondary:hover { background: #f0f0ee; }
++.admin-btn-danger { background: none; color: var(--admin-danger); border: 1px solid var(--admin-border); padding: 8px 12px; font-size: 13px; }
++.admin-btn-danger:hover { background: #fdf1f0; border-color: var(--admin-danger); }
++.admin-btn-icon { background: none; border: 1px solid var(--admin-border); border-radius: 6px; width: 32px; height: 32px; cursor: pointer; font-size: 14px; color: var(--admin-mid); }
++.admin-btn-icon:hover { border-color: var(--admin-accent); color: var(--admin-accent-dark); }
++.admin-btn-icon:disabled { opacity: 0.3; cursor: default; }
++
++.admin-error {
++  background: #fdf1f0;
++  border: 1px solid #f2c6c0;
++  color: var(--admin-danger);
++  padding: 10px 14px;
++  border-radius: 6px;
++  font-size: 13px;
++  margin-bottom: 16px;
++}
++
++.admin-empty { color: var(--admin-mid); text-align: center; padding: 40px 0; }
++
++.admin-list { display: flex; flex-direction: column; gap: 10px; }
++.admin-card {
++  display: flex;
++  align-items: center;
++  gap: 14px;
++  border: 1px solid var(--admin-border);
++  border-radius: 8px;
++  padding: 10px 14px;
++  background: #fff;
++}
++.admin-card-order { display: flex; flex-direction: column; }
++.admin-card-thumb { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: #eee; }
++.admin-card-info { flex: 1; min-width: 0; }
++.admin-card-title { font-weight: 600; font-size: 14px; }
++.admin-card-meta { font-size: 12px; color: var(--admin-mid); }
++.admin-card-actions { display: flex; align-items: center; gap: 6px; }
++
++.admin-add-link { margin-bottom: 20px; display: inline-block; }
++
++.admin-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--admin-border); }
++.admin-tab {
++  padding: 9px 16px;
++  font-size: 13px;
++  font-weight: 600;
++  color: var(--admin-mid);
++  background: none;
++  border: none;
++  border-bottom: 2px solid transparent;
++  cursor: pointer;
++  margin-bottom: -1px;
++}
++.admin-tab[data-active="true"] { color: var(--admin-accent-dark); border-bottom-color: var(--admin-accent); }
++
++.admin-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
++@media (max-width: 640px) { .admin-row { grid-template-columns: 1fr; } }
++
++.admin-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
++@media (max-width: 640px) { .admin-photos { grid-template-columns: 1fr; } }
++.admin-photo-slot { text-align: center; }
++.admin-photo-preview {
++  width: 100%;
++  aspect-ratio: 4 / 3;
++  object-fit: cover;
++  border-radius: 8px;
++  border: 1px solid var(--admin-border);
++  margin-bottom: 8px;
++  background: #eee;
++}
++.admin-photo-placeholder {
++  width: 100%;
++  aspect-ratio: 4 / 3;
++  border-radius: 8px;
++  border: 1px dashed var(--admin-border);
++  margin-bottom: 8px;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  color: var(--admin-mid);
++  font-size: 12px;
++  background: #fafaf9;
++}
++
++.admin-form-actions { display: flex; gap: 10px; margin-top: 24px; }
++.admin-back-link { display: inline-block; margin-bottom: 16px; font-size: 13px; color: var(--admin-mid); text-decoration: none; }
++.admin-back-link:hover { color: var(--admin-accent-dark); }
+diff --git a/src/app/admin/layout.tsx b/src/app/admin/layout.tsx
+new file mode 100644
+index 0000000..3c8b0b1
+--- /dev/null
++++ b/src/app/admin/layout.tsx
+@@ -0,0 +1,18 @@
++import "./admin.css";
++
++// /admin lives outside the /[locale] segment (it's an internal tool, not a
++// public, translated page), so — unlike every other route — it needs its
++// own <html>/<body>: the root layout (src/app/layout.tsx) is intentionally
++// bare and relies on [locale]/layout.tsx to supply that for public pages.
++export const metadata = {
++  title: "Адмінка · Railway Atelier",
++  robots: { index: false, follow: false },
++};
++
++export default function AdminLayout({ children }: { children: React.ReactNode }) {
++  return (
++    <html lang="uk">
++      <body className="admin-body">{children}</body>
++    </html>
++  );
++}
+diff --git a/src/app/admin/login/page.tsx b/src/app/admin/login/page.tsx
+new file mode 100644
+index 0000000..92d533b
+--- /dev/null
++++ b/src/app/admin/login/page.tsx
+@@ -0,0 +1,20 @@
++import { redirect } from "next/navigation";
++import { isAdminSession } from "@/lib/session";
++import LoginForm from "@/components/admin/LoginForm";
++
++export const dynamic = "force-dynamic";
++
++export default async function AdminLoginPage() {
++  if (await isAdminSession()) {
++    redirect("/admin");
++  }
++
++  return (
++    <div className="admin-login-wrap">
++      <div className="admin-login-box admin-panel">
++        <h1>Railway Atelier · Адмінка</h1>
++        <LoginForm />
++      </div>
++    </div>
++  );
++}
+diff --git a/src/app/admin/page.tsx b/src/app/admin/page.tsx
+new file mode 100644
+index 0000000..a64f27b
+--- /dev/null
++++ b/src/app/admin/page.tsx
+@@ -0,0 +1,31 @@
++import Link from "next/link";
++import { requireAdminSession } from "@/lib/session";
++import { getAllWorksForAdmin } from "@/lib/works";
++import { logoutAction } from "./actions";
++import WorksAdminList from "@/components/admin/WorksAdminList";
++
++export const dynamic = "force-dynamic";
++
++export default async function AdminDashboardPage() {
++  await requireAdminSession();
++  const works = await getAllWorksForAdmin();
++
++  return (
++    <div className="admin-shell">
++      <div className="admin-header">
++        <h1 className="admin-title">Архів робіт</h1>
++        <form action={logoutAction}>
++          <button type="submit" className="admin-logout">
++            Вийти
++          </button>
++        </form>
++      </div>
++
++      <Link href="/admin/works/new" className="admin-btn admin-add-link">
++        + Додати роботу
++      </Link>
++
++      <WorksAdminList works={works} />
++    </div>
++  );
++}
+diff --git a/src/app/admin/works/[id]/edit/page.tsx b/src/app/admin/works/[id]/edit/page.tsx
+new file mode 100644
+index 0000000..b531e5b
+--- /dev/null
++++ b/src/app/admin/works/[id]/edit/page.tsx
+@@ -0,0 +1,26 @@
++import Link from "next/link";
++import { notFound } from "next/navigation";
++import { requireAdminSession } from "@/lib/session";
++import { getWorkById } from "@/lib/works";
++import WorkForm from "@/components/admin/WorkForm";
++
++export const dynamic = "force-dynamic";
++
++export default async function EditWorkPage({ params }: { params: Promise<{ id: string }> }) {
++  await requireAdminSession();
++  const { id } = await params;
++  const work = await getWorkById(id);
++  if (!work) notFound();
++
++  return (
++    <div className="admin-shell">
++      <Link href="/admin" className="admin-back-link">
++        ← До списку робіт
++      </Link>
++      <h1 className="admin-title" style={{ marginBottom: 20 }}>
++        Редагувати роботу
++      </h1>
++      <WorkForm mode="edit" work={work} />
++    </div>
++  );
++}
+diff --git a/src/app/admin/works/new/page.tsx b/src/app/admin/works/new/page.tsx
+new file mode 100644
+index 0000000..c7747d6
+--- /dev/null
++++ b/src/app/admin/works/new/page.tsx
+@@ -0,0 +1,21 @@
++import Link from "next/link";
++import { requireAdminSession } from "@/lib/session";
++import WorkForm from "@/components/admin/WorkForm";
++
++export const dynamic = "force-dynamic";
++
++export default async function NewWorkPage() {
++  await requireAdminSession();
++
++  return (
++    <div className="admin-shell">
++      <Link href="/admin" className="admin-back-link">
++        ← До списку робіт
++      </Link>
++      <h1 className="admin-title" style={{ marginBottom: 20 }}>
++        Додати роботу
++      </h1>
++      <WorkForm mode="create" />
++    </div>
++  );
++}
+diff --git a/src/app/api/images/[id]/route.ts b/src/app/api/images/[id]/route.ts
+new file mode 100644
+index 0000000..d297ede
+--- /dev/null
++++ b/src/app/api/images/[id]/route.ts
+@@ -0,0 +1,30 @@
++import { NextResponse } from "next/server";
++import { Readable } from "node:stream";
++import { readImage } from "@/lib/gridfs";
++
++export const dynamic = "force-dynamic";
++
++// Serves a photo uploaded through /admin (stored in MongoDB via GridFS).
++// Photos migrated from the original static seed just live in /public and
++// never hit this route at all.
++export async function GET(
++  _request: Request,
++  { params }: { params: Promise<{ id: string }> }
++) {
++  const { id } = await params;
++  const image = await readImage(id);
++  if (!image) {
++    return NextResponse.json({ error: "Not found" }, { status: 404 });
++  }
++
++  const webStream = Readable.toWeb(image.stream as Readable) as ReadableStream;
++  return new Response(webStream, {
++    headers: {
++      "Content-Type": image.contentType,
++      "Content-Length": String(image.length),
++      // Uploaded photos are immutable (a re-upload creates a new id), so
++      // this can be cached hard.
++      "Cache-Control": "public, max-age=31536000, immutable",
++    },
++  });
++}
+diff --git a/src/app/sitemap.ts b/src/app/sitemap.ts
+index ef0bd39..a1af54c 100644
+--- a/src/app/sitemap.ts
++++ b/src/app/sitemap.ts
+@@ -1,13 +1,16 @@
+ import type { MetadataRoute } from "next";
+ import { locales } from "@/i18n/config";
+-import { projects, getTotalWorkPages } from "@/data/projects";
++import { getAllWorkSlugs, getTotalWorkPages } from "@/lib/works";
+ 
+-export const dynamic = "force-static";
++// Was force-static (data used to be a build-time array); now the archive
++// changes whenever Anton adds/removes a work in /admin, so the sitemap is
++// regenerated per request instead of frozen at the last build.
++export const dynamic = "force-dynamic";
+ 
+ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://example.com";
+ 
+-export default function sitemap(): MetadataRoute.Sitemap {
+-  const totalPages = getTotalWorkPages();
++export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
++  const [totalPages, slugs] = await Promise.all([getTotalWorkPages(), getAllWorkSlugs()]);
+   const entries: MetadataRoute.Sitemap = [];
+ 
+   for (const locale of locales) {
+@@ -25,9 +28,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
+       });
+     }
+ 
+-    for (const project of projects) {
++    for (const slug of slugs) {
+       entries.push({
+-        url: `${SITE_URL}/${locale}/works/${project.slug}/`,
++        url: `${SITE_URL}/${locale}/works/${slug}/`,
+         changeFrequency: "yearly",
+         priority: 0.7,
+       });
+diff --git a/src/components/Gallery.tsx b/src/components/Gallery.tsx
+index 29edca1..2e1cebf 100644
+--- a/src/components/Gallery.tsx
++++ b/src/components/Gallery.tsx
+@@ -1,20 +1,20 @@
+ import Link from "next/link";
+ import type { Locale } from "@/i18n/config";
+ import type { Dictionary } from "@/i18n/dictionaries";
+-import { getProjectsForPage, getTotalWorkPages } from "@/data/projects";
++import { getWorksForPage, getTotalWorkPages } from "@/lib/works";
+ import ProjectCard from "./ProjectCard";
+ import Pagination from "./Pagination";
+ 
+ /**
+- * Homepage teaser: shows page 1 of the portfolio (the same static data
+- * used for full pagination on /works/) with a link through to the full,
+- * paginated archive. Pagination controls are repeated here (not just on
+- * /works/) so visitors can jump straight to page 2+ without first
+- * clicking through to the archive.
++ * Homepage teaser: shows page 1 of the portfolio — now read from MongoDB
++ * instead of a hardcoded array, so a work Anton adds in /admin shows up
++ * here immediately — with a link through to the full, paginated archive.
++ * Pagination controls are repeated here (not just on /works/) so visitors
++ * can jump straight to page 2+ without first clicking through to the
++ * archive.
+  */
+-export default function Gallery({ locale, dict }: { locale: Locale; dict: Dictionary }) {
+-  const featured = getProjectsForPage(1);
+-  const totalPages = getTotalWorkPages();
++export default async function Gallery({ locale, dict }: { locale: Locale; dict: Dictionary }) {
++  const [featured, totalPages] = await Promise.all([getWorksForPage(1), getTotalWorkPages()]);
+   return (
+     <section className="gallery" id="work">
+       <div className="gallery-header">
+diff --git a/src/components/ProjectCard.tsx b/src/components/ProjectCard.tsx
+index 2726390..d70325b 100644
+--- a/src/components/ProjectCard.tsx
++++ b/src/components/ProjectCard.tsx
+@@ -1,47 +1,21 @@
+ import Link from "next/link";
+ import type { Locale } from "@/i18n/config";
+ import type { Dictionary } from "@/i18n/dictionaries";
+-import { isPlaceholder, type WorksItem } from "@/data/projects";
++import type { Work } from "@/lib/work-types";
+ 
+ export default function ProjectCard({
+   project,
+   locale,
+-  dict,
+ }: {
+-  project: WorksItem;
++  project: Work;
+   locale: Locale;
+   dict: Dictionary;
+ }) {
+-  if (isPlaceholder(project)) {
+-    return (
+-      <div className="gallery-card gallery-card-placeholder" aria-hidden="true">
+-        <div className="gallery-card-img gallery-card-placeholder-img">
+-          <svg
+-            width="28"
+-            height="28"
+-            viewBox="0 0 24 24"
+-            fill="none"
+-            stroke="currentColor"
+-            strokeWidth="1.4"
+-          >
+-            <rect x="4" y="8" width="16" height="10" rx="2" />
+-            <circle cx="8" cy="19.5" r="1.5" />
+-            <circle cx="16" cy="19.5" r="1.5" />
+-            <path d="M8 8V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v3" />
+-          </svg>
+-        </div>
+-        <div className="gallery-card-info">
+-          <span className="gallery-card-placeholder-text">{dict.work.comingSoon}</span>
+-        </div>
+-      </div>
+-    );
+-  }
+-
+   const t = project.translations[locale];
+   return (
+     <Link href={`/${locale}/works/${project.slug}/`} className="gallery-card">
+       <div className="gallery-card-img">
+-        <img src={project.images[0]} alt={t.title} />
++        <img src={project.photos[0]} alt={t.title} />
+       </div>
+       <div className="gallery-card-info">
+         <div className="gallery-card-maker">
+diff --git a/src/components/WorksListing.tsx b/src/components/WorksListing.tsx
+index dffde4c..2d7dcd1 100644
+--- a/src/components/WorksListing.tsx
++++ b/src/components/WorksListing.tsx
+@@ -1,13 +1,13 @@
+ import Link from "next/link";
+ import type { Locale } from "@/i18n/config";
+ import type { Dictionary } from "@/i18n/dictionaries";
+-import { getProjectsForPage, getTotalWorkPages } from "@/data/projects";
++import { getWorksForPage, getTotalWorkPages } from "@/lib/works";
+ import Nav from "./Nav";
+ import Footer from "./Footer";
+ import ProjectCard from "./ProjectCard";
+ import Pagination from "./Pagination";
+ 
+-export default function WorksListing({
++export default async function WorksListing({
+   locale,
+   dict,
+   page,
+@@ -16,8 +16,7 @@ export default function WorksListing({
+   dict: Dictionary;
+   page: number;
+ }) {
+-  const totalPages = getTotalWorkPages();
+-  const items = getProjectsForPage(page);
++  const [totalPages, items] = await Promise.all([getTotalWorkPages(), getWorksForPage(page)]);
+   const pathWithoutLocale = page === 1 ? "/works/" : `/works/page/${page}/`;
+ 
+   return (
+diff --git a/src/components/admin/LoginForm.tsx b/src/components/admin/LoginForm.tsx
+new file mode 100644
+index 0000000..fe0e9e1
+--- /dev/null
++++ b/src/components/admin/LoginForm.tsx
+@@ -0,0 +1,23 @@
++"use client";
++
++import { useActionState } from "react";
++import { loginAction, type ActionState } from "@/app/admin/actions";
++
++const initialState: ActionState = {};
++
++export default function LoginForm() {
++  const [state, formAction, pending] = useActionState(loginAction, initialState);
++
++  return (
++    <form action={formAction}>
++      {state.error && <div className="admin-error">{state.error}</div>}
++      <div className="admin-field">
++        <label htmlFor="password">Пароль</label>
++        <input id="password" name="password" type="password" autoFocus required />
++      </div>
++      <button type="submit" className="admin-btn admin-btn-block" disabled={pending}>
++        {pending ? "Входимо…" : "Увійти"}
++      </button>
++    </form>
++  );
++}
+diff --git a/src/components/admin/WorkForm.tsx b/src/components/admin/WorkForm.tsx
+new file mode 100644
+index 0000000..8a6e3a5
+--- /dev/null
++++ b/src/components/admin/WorkForm.tsx
+@@ -0,0 +1,153 @@
++"use client";
++
++import { useActionState, useState } from "react";
++import { useRouter } from "next/navigation";
++import { locales, type Locale } from "@/i18n/config";
++import { createWorkAction, updateWorkAction, type ActionState } from "@/app/admin/actions";
++import type { Work } from "@/lib/work-types";
++
++const LOCALE_LABEL: Record<Locale, string> = { uk: "Українська", en: "English", de: "Deutsch" };
++
++const initialState: ActionState = {};
++
++export default function WorkForm({ mode, work }: { mode: "create" | "edit"; work?: Work }) {
++  const action = mode === "edit" ? updateWorkAction : createWorkAction;
++  const [state, formAction, pending] = useActionState(action, initialState);
++  const [activeLocale, setActiveLocale] = useState<Locale>("uk");
++  const [previews, setPreviews] = useState<[string | null, string | null, string | null]>([
++    work?.photos[0] ?? null,
++    work?.photos[1] ?? null,
++    work?.photos[2] ?? null,
++  ]);
++  const router = useRouter();
++
++  function onPhotoChange(index: 0 | 1 | 2, file: File | undefined) {
++    if (!file) return;
++    const url = URL.createObjectURL(file);
++    setPreviews((prev) => {
++      const next = prev.slice() as typeof prev;
++      next[index] = url;
++      return next;
++    });
++  }
++
++  return (
++    <form action={formAction}>
++      {mode === "edit" && work && <input type="hidden" name="workId" value={work.id} />}
++      {state.error && <div className="admin-error">{state.error}</div>}
++
++      <div className="admin-panel" style={{ marginBottom: 20 }}>
++        <div className="admin-row">
++          <div className="admin-field">
++            <label htmlFor="maker">Виробник</label>
++            <input id="maker" name="maker" type="text" defaultValue={work?.maker} placeholder="напр. Roco" required />
++          </div>
++          <div className="admin-field">
++            <label htmlFor="article">Артикул</label>
++            <input id="article" name="article" type="text" defaultValue={work?.article} placeholder="напр. 72161" required />
++          </div>
++          <div className="admin-field">
++            <label htmlFor="scale">Масштаб</label>
++            <input id="scale" name="scale" type="text" defaultValue={work?.scale} placeholder="напр. HO" required />
++          </div>
++        </div>
++      </div>
++
++      <div className="admin-panel" style={{ marginBottom: 20 }}>
++        <p className="admin-hint" style={{ marginBottom: 12 }}>
++          Фото (рівно 3) {mode === "edit" ? "— залиште порожнім, щоб не змінювати" : ""}
++        </p>
++        <div className="admin-photos">
++          {[0, 1, 2].map((i) => (
++            <div className="admin-photo-slot" key={i}>
++              {previews[i] ? (
++                // eslint-disable-next-line @next/next/no-img-element
++                <img src={previews[i]!} alt="" className="admin-photo-preview" />
++              ) : (
++                <div className="admin-photo-placeholder">Фото {i + 1}</div>
++              )}
++              <input
++                type="file"
++                name={`photo${i + 1}`}
++                accept="image/*"
++                required={mode === "create"}
++                onChange={(e) => onPhotoChange(i as 0 | 1 | 2, e.target.files?.[0])}
++              />
++            </div>
++          ))}
++        </div>
++      </div>
++
++      <div className="admin-panel">
++        <div className="admin-tabs">
++          {locales.map((locale) => (
++            <button
++              key={locale}
++              type="button"
++              className="admin-tab"
++              data-active={activeLocale === locale}
++              onClick={() => setActiveLocale(locale)}
++            >
++              {LOCALE_LABEL[locale]}
++            </button>
++          ))}
++        </div>
++
++        {locales.map((locale) => {
++          const t = work?.translations[locale];
++          return (
++            <div key={locale} hidden={activeLocale !== locale}>
++              <div className="admin-field">
++                <label htmlFor={`title_${locale}`}>Назва</label>
++                <input
++                  id={`title_${locale}`}
++                  name={`title_${locale}`}
++                  type="text"
++                  defaultValue={t?.title}
++                  placeholder="напр. BR 01 — Паровоз DRG"
++                />
++              </div>
++              <div className="admin-field">
++                <label htmlFor={`type_${locale}`}>Тип робіт</label>
++                <input
++                  id={`type_${locale}`}
++                  name={`type_${locale}`}
++                  type="text"
++                  defaultValue={t?.type}
++                  placeholder="напр. Конверсія приводу"
++                />
++              </div>
++              <div className="admin-field">
++                <label htmlFor={`worksList_${locale}`}>Список робіт (кожен пункт — з нового рядка)</label>
++                <textarea
++                  id={`worksList_${locale}`}
++                  name={`worksList_${locale}`}
++                  defaultValue={t?.worksList.join("\n")}
++                  placeholder={"Повне очищення механіки\nОбслуговування редуктора\n…"}
++                />
++              </div>
++              <div className="admin-field">
++                <label htmlFor={`summary_${locale}`}>Короткий опис</label>
++                <textarea
++                  id={`summary_${locale}`}
++                  name={`summary_${locale}`}
++                  defaultValue={t?.summary}
++                  placeholder="Один-два речення про результат"
++                />
++              </div>
++            </div>
++          );
++        })}
++      </div>
++
++      <div className="admin-form-actions">
++        <button type="submit" className="admin-btn" disabled={pending}>
++          {pending ? "Зберігаємо…" : "Зберегти"}
++        </button>
++        <button type="button" className="admin-btn admin-btn-secondary" onClick={() => router.push("/admin")}>
++          Скасувати
++        </button>
++      </div>
++    </form>
++  );
++}
+diff --git a/src/components/admin/WorksAdminList.tsx b/src/components/admin/WorksAdminList.tsx
+new file mode 100644
+index 0000000..d659ac8
+--- /dev/null
++++ b/src/components/admin/WorksAdminList.tsx
+@@ -0,0 +1,97 @@
++"use client";
++
++import { useState, useTransition } from "react";
++import Link from "next/link";
++import { useRouter } from "next/navigation";
++import { deleteWorkAction, reorderWorksAction } from "@/app/admin/actions";
++import type { Work } from "@/lib/work-types";
++
++export default function WorksAdminList({ works }: { works: Work[] }) {
++  const [items, setItems] = useState(works);
++  const [isPending, startTransition] = useTransition();
++  const router = useRouter();
++
++  function move(index: number, direction: -1 | 1) {
++    const target = index + direction;
++    if (target < 0 || target >= items.length) return;
++
++    const next = items.slice();
++    [next[index], next[target]] = [next[target], next[index]];
++    setItems(next);
++
++    startTransition(async () => {
++      await reorderWorksAction(next.map((w) => w.id));
++      router.refresh();
++    });
++  }
++
++  function handleDelete(work: Work) {
++    if (!confirm(`Видалити «${work.translations.uk.title}»? Це незворотно.`)) return;
++    const formData = new FormData();
++    formData.set("id", work.id);
++    startTransition(async () => {
++      await deleteWorkAction(formData);
++      setItems((prev) => prev.filter((w) => w.id !== work.id));
++      router.refresh();
++    });
++  }
++
++  if (items.length === 0) {
++    return <p className="admin-empty">Робіт ще немає — натисніть «Додати роботу», щоб внести першу.</p>;
++  }
++
++  return (
++    <div className="admin-list">
++      {items.map((work, index) => (
++        <div className="admin-card" key={work.id}>
++          <div className="admin-card-order">
++            <button
++              type="button"
++              className="admin-btn-icon"
++              onClick={() => move(index, -1)}
++              disabled={index === 0 || isPending}
++              aria-label="Підняти вище"
++              title="Підняти вище"
++            >
++              ↑
++            </button>
++            <button
++              type="button"
++              className="admin-btn-icon"
++              onClick={() => move(index, 1)}
++              disabled={index === items.length - 1 || isPending}
++              aria-label="Опустити нижче"
++              title="Опустити нижче"
++            >
++              ↓
++            </button>
++          </div>
++
++          {/* eslint-disable-next-line @next/next/no-img-element */}
++          <img src={work.photos[0]} alt="" className="admin-card-thumb" />
++
++          <div className="admin-card-info">
++            <div className="admin-card-title">{work.translations.uk.title}</div>
++            <div className="admin-card-meta">
++              {work.maker} · {work.article} · {work.scale}
++            </div>
++          </div>
++
++          <div className="admin-card-actions">
++            <Link href={`/admin/works/${work.id}/edit`} className="admin-btn admin-btn-secondary">
++              Редагувати
++            </Link>
++            <button
++              type="button"
++              className="admin-btn-danger"
++              onClick={() => handleDelete(work)}
++              disabled={isPending}
++            >
++              Видалити
++            </button>
++          </div>
++        </div>
++      ))}
++    </div>
++  );
++}
+diff --git a/src/lib/gridfs.ts b/src/lib/gridfs.ts
+new file mode 100644
+index 0000000..a96c2c9
+--- /dev/null
++++ b/src/lib/gridfs.ts
+@@ -0,0 +1,84 @@
++import "server-only";
++import mongoose, { Types } from "mongoose";
++import { connectMongoose } from "./mongoose";
++
++const BUCKET_NAME = "workPhotos";
++const IMAGE_URL_PREFIX = "/api/images/";
++
++async function getBucket() {
++  await connectMongoose();
++  const db = mongoose.connection.db;
++  if (!db) throw new Error("Mongoose connection has no database handle yet.");
++  // mongoose.mongo is the underlying MongoDB driver it depends on anyway —
++  // reusing it here avoids adding a second, separately-versioned `mongodb`
++  // package dependency just for GridFS.
++  return new mongoose.mongo.GridFSBucket(db, { bucketName: BUCKET_NAME });
++}
++
++/**
++ * Saves an uploaded photo's bytes into GridFS and returns the URL the rest
++ * of the app should store/render — e.g. in a Work's `photos` array, exactly
++ * like a static "/images/foo.jpg" path from the original seed data.
++ */
++export async function storeImage(
++  bytes: Buffer,
++  filename: string,
++  contentType: string
++): Promise<string> {
++  const bucket = await getBucket();
++  const id = new Types.ObjectId();
++  await new Promise<void>((resolve, reject) => {
++    // Newer GridFS dropped the top-level `contentType` field in favor of
++    // storing it inside `metadata` (see readImage below, which reads it
++    // back from there).
++    const uploadStream = bucket.openUploadStreamWithId(id, filename, {
++      metadata: { contentType },
++    });
++    uploadStream.on("error", reject);
++    uploadStream.on("finish", () => resolve());
++    uploadStream.end(bytes);
++  });
++  return `${IMAGE_URL_PREFIX}${id.toString()}`;
++}
++
++export function isGridfsUrl(url: string): boolean {
++  return url.startsWith(IMAGE_URL_PREFIX);
++}
++
++function idFromUrl(url: string): Types.ObjectId | null {
++  if (!isGridfsUrl(url)) return null;
++  const idPart = url.slice(IMAGE_URL_PREFIX.length);
++  return Types.ObjectId.isValid(idPart) ? new Types.ObjectId(idPart) : null;
++}
++
++/** No-op for static /images/... paths from the original seed — only ever deletes our own uploads. */
++export async function deleteImage(url: string): Promise<void> {
++  const id = idFromUrl(url);
++  if (!id) return;
++  const bucket = await getBucket();
++  try {
++    await bucket.delete(id);
++  } catch {
++    // Already gone / never existed — fine, deletion is best-effort.
++  }
++}
++
++export interface StoredImage {
++  stream: NodeJS.ReadableStream;
++  contentType: string;
++  length: number;
++}
++
++export async function readImage(id: string): Promise<StoredImage | null> {
++  if (!Types.ObjectId.isValid(id)) return null;
++  const bucket = await getBucket();
++  const _id = new Types.ObjectId(id);
++  const files = await bucket.find({ _id }).toArray();
++  const file = files[0];
++  if (!file) return null;
++  return {
++    stream: bucket.openDownloadStream(_id),
++    contentType: (file.metadata?.contentType as string) || "application/octet-stream",
++    length: file.length,
++  };
++}
+diff --git a/src/lib/mongoose.ts b/src/lib/mongoose.ts
+new file mode 100644
+index 0000000..9fb8dbf
+--- /dev/null
++++ b/src/lib/mongoose.ts
+@@ -0,0 +1,29 @@
++import mongoose from "mongoose";
++
++// Standard Next.js + Mongoose connection-caching pattern: in dev, Next
++// reloads modules on every edit, which would otherwise open a fresh
++// connection per request; caching the promise on `global` survives that.
++// In production (one long-lived Node process on Render) this is just a
++// simple singleton.
++
++const MONGODB_URI = process.env.MONGODB_URI;
++const MONGODB_DB = process.env.MONGODB_DB || "railway_atelier";
++
++declare global {
++  var _mongooseConnPromise: Promise<typeof mongoose> | undefined;
++}
++
++/** Awaiting this guarantees mongoose is connected before you touch a model or the GridFS bucket. */
++export function connectMongoose(): Promise<typeof mongoose> {
++  if (!MONGODB_URI) {
++    throw new Error(
++      "MONGODB_URI is not set. Add it to your environment (see .env.example) — " +
++        "the works archive and /admin cannot read or write data without it."
++    );
++  }
++
++  if (!global._mongooseConnPromise) {
++    global._mongooseConnPromise = mongoose.connect(MONGODB_URI, { dbName: MONGODB_DB });
++  }
++  return global._mongooseConnPromise;
++}
+diff --git a/src/lib/session.ts b/src/lib/session.ts
+new file mode 100644
+index 0000000..4773e43
+--- /dev/null
++++ b/src/lib/session.ts
+@@ -0,0 +1,81 @@
++import "server-only";
++import { createHmac, timingSafeEqual } from "node:crypto";
++import { cookies } from "next/headers";
++import { redirect } from "next/navigation";
++
++// Deliberately minimal: one shared password (ADMIN_PASSWORD), no accounts,
++// no database-backed sessions. A successful login just gets a signed,
++// expiring cookie — nothing else needed for a single trusted editor.
++
++export const ADMIN_COOKIE_NAME = "pr_admin_session";
++const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days — Anton shouldn't have to log in often
++
++function getSecret(): string {
++  const secret = process.env.SESSION_SECRET;
++  if (!secret) {
++    throw new Error(
++      "SESSION_SECRET is not set. Add it to your environment (see .env.example) — " +
++        "/admin login cannot issue sessions without it."
++    );
++  }
++  return secret;
++}
++
++function sign(value: string): string {
++  return createHmac("sha256", getSecret()).update(value).digest("hex");
++}
++
++export function createSessionToken(): string {
++  const expires = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
++  const payload = String(expires);
++  return `${payload}.${sign(payload)}`;
++}
++
++export function isValidSessionToken(token: string | undefined): boolean {
++  if (!token) return false;
++  const [payload, signature] = token.split(".");
++  if (!payload || !signature) return false;
++
++  const expected = sign(payload);
++  const a = Buffer.from(signature, "hex");
++  const b = Buffer.from(expected, "hex");
++  if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
++
++  const expires = Number(payload);
++  return Number.isFinite(expires) && expires * 1000 > Date.now();
++}
++
++export function checkPassword(candidate: string): boolean {
++  const real = process.env.ADMIN_PASSWORD;
++  if (!real) {
++    throw new Error(
++      "ADMIN_PASSWORD is not set. Add it to your environment (see .env.example) — " +
++        "/admin has no password to check against without it."
++    );
++  }
++  const a = Buffer.from(candidate);
++  const b = Buffer.from(real);
++  // Lengths differ often enough (wrong password) that this alone isn't a
++  // meaningful timing leak, but compare the hash either way for good measure.
++  if (a.length !== b.length) return false;
++  return timingSafeEqual(a, b);
++}
++
++export async function isAdminSession(): Promise<boolean> {
++  const store = await cookies();
++  return isValidSessionToken(store.get(ADMIN_COOKIE_NAME)?.value);
++}
++
++/** Call at the top of every /admin page (except /admin/login). */
++export async function requireAdminSession(): Promise<void> {
++  if (!(await isAdminSession())) {
++    redirect("/admin/login");
++  }
++}
++
++/** Call at the top of every admin server action, so it can't be invoked without a valid session even if someone finds the action's endpoint directly. */
++export async function requireAdminForAction(): Promise<void> {
++  if (!(await isAdminSession())) {
++    throw new Error("Сесія закінчилась. Увійдіть ще раз.");
++  }
++}
+diff --git a/src/lib/slugify.ts b/src/lib/slugify.ts
+new file mode 100644
+index 0000000..9bc8c8d
+--- /dev/null
++++ b/src/lib/slugify.ts
+@@ -0,0 +1,20 @@
++const CYRILLIC_TO_LATIN: Record<string, string> = {
++  а: "a", б: "b", в: "v", г: "h", ґ: "g", д: "d", е: "e", є: "ie", ж: "zh",
++  з: "z", и: "y", і: "i", ї: "i", й: "i", к: "k", л: "l", м: "m", н: "n",
++  о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "kh", ц: "ts",
++  ч: "ch", ш: "sh", щ: "shch", ь: "", ю: "iu", я: "ia", ъ: "", ы: "y", э: "e",
++};
++
++/** Turns "Roco BR 01" / "Рока БР 01" into "roco-br-01" — used to auto-name a work's URL slug so Anton never has to think about one. */
++export function slugify(input: string): string {
++  const transliterated = input
++    .toLowerCase()
++    .split("")
++    .map((ch) => CYRILLIC_TO_LATIN[ch] ?? ch)
++    .join("");
++
++  return transliterated
++    .replace(/[^a-z0-9]+/g, "-")
++    .replace(/^-+|-+$/g, "")
++    .slice(0, 80) || "work";
++}
+diff --git a/src/lib/work-form.ts b/src/lib/work-form.ts
+new file mode 100644
+index 0000000..a548748
+--- /dev/null
++++ b/src/lib/work-form.ts
+@@ -0,0 +1,99 @@
++import "server-only";
++import { locales, type Locale } from "@/i18n/config";
++import { storeImage } from "./gridfs";
++import type { WorkTranslation } from "./work-types";
++
++// Word for "photo" in each locale, used to auto-build alt text so the
++// admin form never has to ask Anton to type nine alt-text variants by hand.
++const PHOTO_WORD: Record<Locale, string> = { uk: "фото", en: "photo", de: "Foto" };
++
++export interface ParsedWorkFields {
++  maker: string;
++  article: string;
++  scale: string;
++  translations: Record<Locale, WorkTranslation>;
++}
++
++function requiredText(formData: FormData, field: string): string {
++  const value = String(formData.get(field) ?? "").trim();
++  if (!value) throw new Error(`Поле "${field}" обов'язкове.`);
++  return value;
++}
++
++function parseWorksList(raw: string): string[] {
++  return raw
++    .split("\n")
++    .map((line) => line.trim())
++    .filter(Boolean);
++}
++
++const LOCALE_LABEL: Record<Locale, string> = { uk: "укр.", en: "англ.", de: "нім." };
++
++export function parseWorkFields(formData: FormData): ParsedWorkFields {
++  const maker = requiredText(formData, "maker");
++  const article = requiredText(formData, "article");
++  const scale = requiredText(formData, "scale");
++
++  const translations = {} as Record<Locale, WorkTranslation>;
++  for (const locale of locales) {
++    const title = String(formData.get(`title_${locale}`) ?? "").trim();
++    const type = String(formData.get(`type_${locale}`) ?? "").trim();
++    const summary = String(formData.get(`summary_${locale}`) ?? "").trim();
++    const worksList = parseWorksList(String(formData.get(`worksList_${locale}`) ?? ""));
++
++    if (!title || !type || !summary || worksList.length === 0) {
++      throw new Error(
++        `Заповніть усі поля для мови (${LOCALE_LABEL[locale]}): назва, тип робіт, опис і список робіт (хоч один рядок).`
++      );
++    }
++
++    translations[locale] = {
++      title,
++      type,
++      summary,
++      worksList,
++      photoAlts: [
++        `${title} — ${PHOTO_WORD[locale]} 1`,
++        `${title} — ${PHOTO_WORD[locale]} 2`,
++        `${title} — ${PHOTO_WORD[locale]} 3`,
++      ],
++    };
++  }
++
++  return { maker, article, scale, translations };
++}
++
++const MAX_PHOTO_BYTES = 10 * 1024 * 1024; // 10MB
++
++/**
++ * Resolves the 3 photo slots: a freshly uploaded file wins, otherwise the
++ * existing photo (when editing) is kept. Throws if a slot ends up with
++ * neither — every work needs exactly 3 photos, same as before.
++ */
++export async function parsePhotos(
++  formData: FormData,
++  existingPhotos: [string, string, string] | null
++): Promise<[string, string, string]> {
++  const results: string[] = [];
++
++  for (let i = 1; i <= 3; i++) {
++    const file = formData.get(`photo${i}`);
++    if (file instanceof File && file.size > 0) {
++      if (!file.type.startsWith("image/")) {
++        throw new Error(`Фото ${i}: файл має бути зображенням.`);
++      }
++      if (file.size > MAX_PHOTO_BYTES) {
++        throw new Error(`Фото ${i}: файл завеликий (максимум 10 МБ).`);
++      }
++      const bytes = Buffer.from(await file.arrayBuffer());
++      const url = await storeImage(bytes, file.name, file.type);
++      results.push(url);
++    } else if (existingPhotos?.[i - 1]) {
++      results.push(existingPhotos[i - 1]);
++    } else {
++      throw new Error(`Завантажте фото ${i}.`);
++    }
++  }
++
++  return results as [string, string, string];
++}
+diff --git a/src/lib/work-types.ts b/src/lib/work-types.ts
+new file mode 100644
+index 0000000..413fca6
+--- /dev/null
++++ b/src/lib/work-types.ts
+@@ -0,0 +1,43 @@
++import type { Locale } from "@/i18n/config";
++
++// Same shape as before the migration to MongoDB (src/data/projects.ts) —
++// kept identical on purpose so none of the rendering components (Gallery,
++// ProjectCard, WorksListing, the project detail page) had to change their
++// prop shapes, only where the data comes from.
++
++export interface WorkTranslation {
++  title: string;
++  type: string;
++  worksList: string[];
++  summary: string;
++  photoAlts: [string, string, string];
++}
++
++export interface Work {
++  /** Mongo _id, as a string. */
++  id: string;
++  /** URL slug, also used as the stable sort key for prev/next navigation. */
++  slug: string;
++  maker: string;
++  article: string;
++  scale: string;
++  /**
++   * Exactly 3 photo URLs. Either a static path into /public (for the
++   * originally-migrated projects, e.g. "/images/hero-engine.jpg") or
++   * "/api/images/<id>" for anything uploaded later through /admin.
++   */
++  photos: [string, string, string];
++  translations: Record<Locale, WorkTranslation>;
++  /** Ascending sort order shown in the archive; set/changed only from /admin. */
++  sortOrder: number;
++}
++
++/** Fields the admin form edits. `id` is absent for a new work. */
++export interface WorkInput {
++  slug: string;
++  maker: string;
++  article: string;
++  scale: string;
++  photos: [string, string, string];
++  translations: Record<Locale, WorkTranslation>;
++}
+diff --git a/src/lib/works.ts b/src/lib/works.ts
+new file mode 100644
+index 0000000..4621a28
+--- /dev/null
++++ b/src/lib/works.ts
+@@ -0,0 +1,158 @@
++import "server-only";
++import { Types } from "mongoose";
++import { connectMongoose } from "./mongoose";
++import { WorkModel, type WorkDocument } from "@/models/Work";
++import { deleteImage } from "./gridfs";
++import { slugify } from "./slugify";
++import type { Work, WorkInput } from "./work-types";
++
++// Same page size as the old static-array version (src/data/projects.ts),
++// so the archive's pagination behaves identically — just driven by
++// however many real works are in Mongo instead of a hardcoded array.
++export const WORKS_PER_PAGE = 4;
++
++function toWork(doc: WorkDocument & { _id: Types.ObjectId }): Work {
++  return {
++    id: doc._id.toString(),
++    slug: doc.slug,
++    maker: doc.maker,
++    article: doc.article,
++    scale: doc.scale,
++    photos: doc.photos as [string, string, string],
++    translations: doc.translations as Work["translations"],
++    sortOrder: doc.sortOrder,
++  };
++}
++
++export async function getTotalWorkPages(): Promise<number> {
++  await connectMongoose();
++  const count = await WorkModel.countDocuments();
++  return Math.max(1, Math.ceil(count / WORKS_PER_PAGE));
++}
++
++export async function getWorksForPage(page: number): Promise<Work[]> {
++  await connectMongoose();
++  const docs = await WorkModel.find({})
++    .sort({ sortOrder: 1 })
++    .skip((page - 1) * WORKS_PER_PAGE)
++    .limit(WORKS_PER_PAGE);
++  return docs.map(toWork);
++}
++
++export async function getWorkBySlug(slug: string): Promise<Work | null> {
++  await connectMongoose();
++  const doc = await WorkModel.findOne({ slug });
++  return doc ? toWork(doc) : null;
++}
++
++export async function getWorkById(id: string): Promise<Work | null> {
++  if (!Types.ObjectId.isValid(id)) return null;
++  await connectMongoose();
++  const doc = await WorkModel.findById(id);
++  return doc ? toWork(doc) : null;
++}
++
++export async function getWorkNeighbors(
++  slug: string
++): Promise<{ prev: Work | null; next: Work | null }> {
++  await connectMongoose();
++  const all = await WorkModel.find({}, { slug: 1 }).sort({ sortOrder: 1 });
++  const index = all.findIndex((w) => w.slug === slug);
++  if (index === -1) return { prev: null, next: null };
++
++  const [prev, next] = await Promise.all([
++    index > 0 ? getWorkBySlug(all[index - 1].slug) : Promise.resolve(null),
++    index < all.length - 1 ? getWorkBySlug(all[index + 1].slug) : Promise.resolve(null),
++  ]);
++  return { prev, next };
++}
++
++/** Just the slugs, in display order — cheap enough to call from sitemap.ts on every request. */
++export async function getAllWorkSlugs(): Promise<string[]> {
++  await connectMongoose();
++  const docs = await WorkModel.find({}, { slug: 1 }).sort({ sortOrder: 1 });
++  return docs.map((d) => d.slug);
++}
++
++/** Full list, sorted for display in /admin. Same data as the public site sees. */
++export async function getAllWorksForAdmin(): Promise<Work[]> {
++  await connectMongoose();
++  const docs = await WorkModel.find({}).sort({ sortOrder: 1 });
++  return docs.map(toWork);
++}
++
++async function assertSlugAvailable(slug: string, excludeId?: string) {
++  const existing = await WorkModel.findOne({ slug });
++  if (existing && existing._id.toString() !== excludeId) {
++    throw new Error(`Слаг "${slug}" вже використовується іншою роботою.`);
++  }
++}
++
++export async function createWork(input: WorkInput): Promise<Work> {
++  await connectMongoose();
++  await assertSlugAvailable(input.slug);
++
++  const highest = await WorkModel.findOne({}, { sortOrder: 1 }).sort({ sortOrder: -1 });
++  const sortOrder = (highest?.sortOrder ?? -1) + 1;
++
++  const doc = await WorkModel.create({ ...input, sortOrder });
++  return toWork(doc);
++}
++
++export async function updateWork(id: string, input: WorkInput): Promise<Work> {
++  if (!Types.ObjectId.isValid(id)) throw new Error("Невірний ідентифікатор роботи.");
++  await connectMongoose();
++  await assertSlugAvailable(input.slug, id);
++
++  const doc = await WorkModel.findById(id);
++  if (!doc) throw new Error("Роботу не знайдено.");
++  const oldPhotos = [...doc.photos];
++
++  doc.set(input);
++  await doc.save();
++
++  // Any photo that was replaced (new upload took its place) is no longer
++  // referenced anywhere — clean it up. Photos still in use are untouched.
++  const stillUsed = new Set(input.photos);
++  await Promise.all(oldPhotos.filter((url) => !stillUsed.has(url)).map((url) => deleteImage(url)));
++
++  return toWork(doc);
++}
++
++export async function deleteWork(id: string): Promise<void> {
++  if (!Types.ObjectId.isValid(id)) throw new Error("Невірний ідентифікатор роботи.");
++  await connectMongoose();
++  const doc = await WorkModel.findByIdAndDelete(id);
++  if (!doc) return;
++  // Clean up any uploaded (GridFS-backed) photos; static /images/... paths
++  // from the original seed are left alone since they're not ours to delete.
++  await Promise.all(doc.photos.map((url) => deleteImage(url)));
++}
++
++/** Persists a new top-to-bottom order for the archive. */
++export async function reorderWorks(orderedIds: string[]): Promise<void> {
++  await connectMongoose();
++  const validIds = orderedIds.filter((id) => Types.ObjectId.isValid(id));
++  if (validIds.length === 0) return;
++  await WorkModel.bulkWrite(
++    validIds.map((id, index) => ({
++      updateOne: {
++        filter: { _id: new Types.ObjectId(id) },
++        update: { $set: { sortOrder: index } },
++      },
++    }))
++  );
++}
++
++/** Builds a URL-safe, unique slug from a work's maker + article, e.g. "roco-72161". Never shown to or edited by the admin user. */
++export async function generateUniqueSlug(base: string): Promise<string> {
++  await connectMongoose();
++  const root = slugify(base);
++  let candidate = root;
++  let suffix = 2;
++  while (await WorkModel.exists({ slug: candidate })) {
++    candidate = `${root}-${suffix}`;
++    suffix += 1;
++  }
++  return candidate;
++}
+diff --git a/src/models/Work.ts b/src/models/Work.ts
+new file mode 100644
+index 0000000..878be83
+--- /dev/null
++++ b/src/models/Work.ts
+@@ -0,0 +1,55 @@
++import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
++
++const exactlyThree = {
++  validator: (v: string[]) => Array.isArray(v) && v.length === 3,
++  message: "Потрібно рівно 3 значення (маємо {VALUE}).",
++};
++
++const translationSchema = new Schema(
++  {
++    title: { type: String, required: true },
++    type: { type: String, required: true },
++    worksList: {
++      type: [String],
++      required: true,
++      validate: {
++        validator: (v: string[]) => Array.isArray(v) && v.length > 0,
++        message: "Список робіт не може бути порожнім.",
++      },
++    },
++    summary: { type: String, required: true },
++    photoAlts: { type: [String], required: true, validate: exactlyThree },
++  },
++  { _id: false }
++);
++
++const workSchema = new Schema(
++  {
++    // Auto-generated from maker + article (see src/lib/slugify.ts) — never
++    // edited through /admin, just the archive's stable, unique URL key.
++    slug: { type: String, required: true, unique: true },
++    maker: { type: String, required: true },
++    article: { type: String, required: true },
++    scale: { type: String, required: true },
++    // Either a static "/images/foo.jpg" path (the 6 originally-seeded
++    // works) or "/api/images/<gridfsId>" for anything uploaded via /admin.
++    photos: { type: [String], required: true, validate: exactlyThree },
++    translations: {
++      uk: { type: translationSchema, required: true },
++      en: { type: translationSchema, required: true },
++      de: { type: translationSchema, required: true },
++    },
++    // Ascending display order in the archive; only ever changed via the
++    // reorder buttons in /admin (src/app/admin/actions.ts).
++    sortOrder: { type: Number, required: true, default: 0, index: true },
++  },
++  { timestamps: true }
++);
++
++export type WorkDocument = InferSchemaType<typeof workSchema>;
++
++// `models.Work ||` avoids Next.js's "Cannot overwrite `Work` model" error
++// when this module is re-evaluated on every hot-reload in dev. Cast so
++// TypeScript keeps the real field types instead of collapsing to the
++// loosely-typed `models.Work` branch.
++export const WorkModel = (models.Work as Model<WorkDocument>) || model<WorkDocument>("Work", workSchema);
+-- 
+2.43.0
+
