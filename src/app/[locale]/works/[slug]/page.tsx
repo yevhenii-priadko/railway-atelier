@@ -47,7 +47,10 @@ export default async function ProjectPage({
       <Nav locale={locale} dict={dict} pathWithoutLocale={`/works/${slug}/`} />
       <section className="project">
         <div className="project-inner">
-          <Link href={`/${locale}/works/`} className="project-back">
+          {/* /works/ (the standalone archive listing) is gone — the archive
+              now lives on the homepage itself, so "back"/"all projects"
+              point at its #work section instead. */}
+          <Link href={`/${locale}/#work`} className="project-back">
             {dict.projectDetail.back}
           </Link>
 
@@ -87,7 +90,7 @@ export default async function ProjectPage({
             ) : (
               <span className="project-nav-disabled">{dict.projectDetail.prevProject}</span>
             )}
-            <Link href={`/${locale}/works/`} className="project-nav-link">
+            <Link href={`/${locale}/#work`} className="project-nav-link">
               {dict.projectDetail.allProjects}
             </Link>
             {next ? (

@@ -472,6 +472,12 @@ body {
   gap: 10px;
   padding: 0 20px;
   margin-bottom: 28px;
+  transition: opacity 0.15s;
+}
+/* Brief dimming while GalleryGrid fetches the next page in place. */
+.gallery-grid-loading {
+  opacity: 0.5;
+  pointer-events: none;
 }
 .gallery-card {
   background: var(--white);
@@ -939,6 +945,9 @@ footer {
     gap: 16px;
     padding: 0 40px;
   }
+  .pagination {
+    padding: 24px 40px;
+  }
   .gallery-card-info {
     padding: 18px 20px 22px;
   }
@@ -1223,54 +1232,9 @@ footer {
   opacity: 0.55;
 }
 
-/* ══════════════════════════════
-   WORKS ARCHIVE PAGE (added for Next.js port)
-══════════════════════════════ */
-.works-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 88px 20px 64px;
-}
-.works-page-header {
-  margin-bottom: 32px;
-}
-.works-page-back {
-  display: inline-block;
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--mid);
-  text-decoration: none;
-  margin-bottom: 24px;
-  transition: color 0.2s;
-}
-.works-page-back:hover {
-  color: var(--tiffany);
-}
-.works-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 48px;
-}
-
-.gallery-more {
-  display: inline-block;
-  margin: 8px 20px 0;
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--dark);
-  text-decoration: none;
-  border-bottom: 1px solid var(--tiffany);
-  padding-bottom: 3px;
-  transition: color 0.2s;
-}
-.gallery-more:hover {
-  color: var(--tiffany);
-}
+/* The standalone /works/ archive page (and its "view all" link from the
+   homepage) is gone — the archive lives on the homepage itself now, paged
+   in place via .gallery-grid + .pagination below (see GalleryGrid.tsx). */
 
 /* ══════════════════════════════
    PAGINATION (added for Next.js port)
@@ -1299,7 +1263,7 @@ footer {
   column-gap: 8px;
   row-gap: 14px;
   align-items: center;
-  padding: 24px 0;
+  padding: 24px 20px;
   border-top: 1px solid var(--rule);
 }
 .pagination > .pagination-pages {
@@ -1316,13 +1280,9 @@ footer {
   grid-area: next;
   justify-self: end;
 }
-.pagination-top {
-  border-top: none;
-  border-bottom: 1px solid var(--rule);
-  padding: 0 0 28px;
-  margin-bottom: 8px;
-}
 .pagination-link {
+  background: none;
+  cursor: pointer;
   font-family: 'DM Mono', monospace;
   font-size: 11px;
   font-weight: 600;
@@ -1367,6 +1327,8 @@ footer {
   row-gap: 8px;
 }
 .pagination-page {
+  background: none;
+  cursor: pointer;
   font-family: 'DM Mono', monospace;
   font-size: 12px;
   font-weight: 600;
@@ -1404,28 +1366,10 @@ footer {
 }
 
 @media screen and (min-width: 768px) {
-  .works-page {
-    padding: 100px 40px 80px;
-  }
-  .works-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-  }
   .pagination {
     /* Back to a single row once there's room: Prev — page numbers — Next. */
     grid-template-columns: auto 1fr auto;
     grid-template-areas: "prev pages next";
     row-gap: 0;
-  }
-}
-
-@media (min-width: 1025px) {
-  .works-page {
-    padding: 120px 48px 100px;
-    max-width: 1200px;
-  }
-  .works-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
   }
 }
