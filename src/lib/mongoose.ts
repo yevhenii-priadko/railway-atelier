@@ -1,4 +1,14 @@
+import dns from "node:dns";
 import mongoose from "mongoose";
+
+// Some local networks/routers block SRV-type DNS queries, which
+// mongodb+srv:// needs to resolve the cluster's shard hosts — this showed
+// up as "querySrv ECONNREFUSED ..." (Eugene hit this running the seed
+// script locally, and again running `next dev`). Pointing Node's resolver
+// at Google's public DNS sidesteps it. Harmless in production (Render's
+// network already resolves SRV records fine) and only applies to this
+// process's own DNS lookups, so it doesn't touch anything system-wide.
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 // Standard Next.js + Mongoose connection-caching pattern: in dev, Next
 // reloads modules on every edit, which would otherwise open a fresh
