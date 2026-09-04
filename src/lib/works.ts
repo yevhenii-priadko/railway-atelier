@@ -6,10 +6,11 @@ import { deleteImage } from "./gridfs";
 import { slugify } from "./slugify";
 import type { Work, WorkInput } from "./work-types";
 
-// Same page size as the old static-array version (src/data/projects.ts),
-// so the archive's pagination behaves identically — just driven by
-// however many real works are in Mongo instead of a hardcoded array.
-export const WORKS_PER_PAGE = 4;
+// 6 per page — a full row-and-a-half on the archive's 2-column mobile grid,
+// exactly two rows of 3 on its desktop grid (see .works-grid in globals.css).
+// Eugene asked for 6 instead of the original 4 once the archive moved to a
+// dedicated page with no homepage pagination competing for the same data.
+export const WORKS_PER_PAGE = 6;
 
 function toWork(doc: WorkDocument & { _id: Types.ObjectId }): Work {
   return {

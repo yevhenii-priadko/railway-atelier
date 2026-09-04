@@ -473,12 +473,6 @@ body {
   padding: 0 20px;
   margin-bottom: 28px;
 }
-.gallery .pagination {
-  padding: 24px 20px;
-}
-.gallery .pagination-top {
-  padding: 0 20px 28px;
-}
 .gallery-card {
   background: var(--white);
   border: 1px solid var(--rule);
@@ -945,12 +939,6 @@ footer {
     gap: 16px;
     padding: 0 40px;
   }
-  .gallery .pagination {
-    padding: 24px 40px;
-  }
-  .gallery .pagination-top {
-    padding: 0 40px 28px;
-  }
   .gallery-card-info {
     padding: 18px 20px 22px;
   }
@@ -1147,16 +1135,6 @@ footer {
     grid-template-columns: repeat(3, 1fr);
     gap: 24px;
     padding: 0 48px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  .gallery .pagination {
-    padding: 24px 48px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  .gallery .pagination-top {
-    padding: 0 48px 28px;
     max-width: 1200px;
     margin: 0 auto;
   }
