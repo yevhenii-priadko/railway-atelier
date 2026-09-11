@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { locales, hasLocale, type Locale } from "@/i18n/config";
-import { getDictionary } from "@/i18n/dictionaries";
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { locales, hasLocale, type Locale } from '@/i18n/config';
+import { getDictionary } from '@/i18n/dictionaries';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -18,6 +18,7 @@ export async function generateMetadata({
   return {
     title: dict.meta.title,
     description: dict.meta.description,
+    alternates: { canonical: `/${locale}/` },
   };
 }
 
