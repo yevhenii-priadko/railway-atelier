@@ -10,22 +10,26 @@
 //
 // Usage:
 //   MONGODB_URI="mongodb+srv://..." npm run seed
-import mongoose from "mongoose";
-import { seedWorks } from "./seed-data.mjs";
+import dns from 'dns';
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+import mongoose from 'mongoose';
+import { seedWorks } from './seed-data.mjs';
 
 const uri = process.env.MONGODB_URI;
 if (!uri) {
-  console.error('MONGODB_URI is not set. Example:\n  MONGODB_URI="mongodb+srv://..." npm run seed');
+  console.error(
+    'MONGODB_URI is not set. Example:\n  MONGODB_URI="mongodb+srv://..." npm run seed'
+  );
   process.exit(1);
 }
-const dbName = process.env.MONGODB_DB || "railway_atelier";
+const dbName = process.env.MONGODB_DB || 'railway_atelier';
 
 async function main() {
   await mongoose.connect(uri, { dbName });
   // Plain collection access here (not the Work model / schema) — this is a
   // one-off bulk insert of already-known-good data, no per-field validation
   // needed, and it keeps this script independent of the TypeScript model.
-  const collection = mongoose.connection.db.collection("works");
+  const collection = mongoose.connection.db.collection('works');
 
   await collection.createIndex({ slug: 1 }, { unique: true });
   await collection.createIndex({ sortOrder: 1 });
@@ -52,7 +56,9 @@ async function main() {
     inserted += 1;
   }
 
-  console.log(`Готово: додано ${inserted}, пропущено (вже існували) ${skipped}.`);
+  console.log(
+    `Готово: додано ${inserted}, пропущено (вже існували) ${skipped}.`
+  );
   await mongoose.disconnect();
 }
 

@@ -37,22 +37,52 @@
     "title": "Was mit Ihrem Modell geschieht",
     "note": "Jede Konvertierung ist individuell. Der Arbeitsumfang hängt von der Konstruktion der Lokomotive, ihrem technischen Zustand und dem gewählten Motor ab.",
     "items": [
-      { "title": "Vollständige Demontage & Reinigung", "desc": "Die Lokomotive wird vollständig zerlegt. Altes Fett wird entfernt, die mechanischen Baugruppen werden gereinigt, begutachtet und ihr technischer Zustand bewertet. Bei Bedarf wird eine Liste der zu ersetzenden Teile erstellt." },
-      { "title": "Mechanik-Wartung", "desc": "Das Getriebe wird vollständig zerlegt, gereinigt, geprüft, neu geschmiert und wieder zusammengebaut. Bei Bedarf werden mechanische Einstellungen vorgenommen und neue Teile verbaut." },
-      { "title": "Vorbereitung auf den neuen Motor", "desc": "Der Serienmotor wird ausgebaut. Bei Bedarf wird der Rahmen oder die Halterung für den Einbau eines modernen bürstenlosen Antriebs angepasst." },
-      { "title": "Einbau des neuen Antriebs", "desc": "Der neue Motor wird eingebaut, zentriert und fixiert. Nach der Montage wird eine Aushärtezeit für die Klebeverbindung eingehalten." },
-      { "title": "Abschließende Schmierung & Einstellung", "desc": "Nach Abschluss der Montage erhält der Mechanismus die finale Schmierung. Die Lokomotive wird eingefahren, und die Dekoder-Parameter werden eingestellt." },
-      { "title": "Abschlusstest", "desc": "Vor der Übergabe an den Besitzer werden Laufruhe, Mindestgeschwindigkeit, Betriebsstabilität und die Gesamtqualität der Konvertierung geprüft." }
+      {
+        "title": "Vollständige Demontage & Reinigung",
+        "desc": "Die Lokomotive wird vollständig zerlegt. Altes Fett wird entfernt, die mechanischen Baugruppen werden gereinigt, begutachtet und ihr technischer Zustand bewertet. Bei Bedarf wird eine Liste der zu ersetzenden Teile erstellt."
+      },
+      {
+        "title": "Mechanik-Wartung",
+        "desc": "Das Getriebe wird vollständig zerlegt, gereinigt, geprüft, neu geschmiert und wieder zusammengebaut. Bei Bedarf werden mechanische Einstellungen vorgenommen und neue Teile verbaut."
+      },
+      {
+        "title": "Vorbereitung auf den neuen Motor",
+        "desc": "Der Serienmotor wird ausgebaut. Bei Bedarf wird der Rahmen oder die Halterung für den Einbau eines modernen bürstenlosen Antriebs angepasst."
+      },
+      {
+        "title": "Einbau des neuen Antriebs",
+        "desc": "Der neue Motor wird eingebaut, zentriert und fixiert. Nach der Montage wird eine Aushärtezeit für die Klebeverbindung eingehalten."
+      },
+      {
+        "title": "Abschließende Schmierung & Einstellung",
+        "desc": "Nach Abschluss der Montage erhält der Mechanismus die finale Schmierung. Die Lokomotive wird eingefahren, und die Dekoder-Parameter werden eingestellt."
+      },
+      {
+        "title": "Abschlusstest",
+        "desc": "Vor der Übergabe an den Besitzer werden Laufruhe, Mindestgeschwindigkeit, Betriebsstabilität und die Gesamtqualität der Konvertierung geprüft."
+      }
     ]
   },
   "process": {
     "label": "Unsere Arbeitsweise",
     "title": "Vier Schritte zu einem neuen Modell",
     "steps": [
-      { "title": "Annahme", "desc": "Wir nehmen das Modell entgegen, dokumentieren seinen Ausgangszustand, bewerten den technischen Zustand und stimmen den Arbeitsumfang ab." },
-      { "title": "Demontage", "desc": "Wir zerlegen das Modell sorgfältig, dokumentieren die Konstruktion und bereiten alle Baugruppen für die weitere Modernisierung vor." },
-      { "title": "Einbau", "desc": "Wir bauen den neuen Antrieb ein, führen notwendige mechanische Anpassungen durch, prüfen die elektrischen Verbindungen und bereiten das Modell für die Einstellung vor." },
-      { "title": "Test", "desc": "Wir fahren das Modell ein, prüfen die Laufruhe, nehmen die Endeinstellung vor und übergeben das Modell mit 6 Monaten Garantie an den Besitzer." }
+      {
+        "title": "Annahme",
+        "desc": "Wir nehmen das Modell entgegen, dokumentieren seinen Ausgangszustand, bewerten den technischen Zustand und stimmen den Arbeitsumfang ab."
+      },
+      {
+        "title": "Demontage",
+        "desc": "Wir zerlegen das Modell sorgfältig, dokumentieren die Konstruktion und bereiten alle Baugruppen für die weitere Modernisierung vor."
+      },
+      {
+        "title": "Einbau",
+        "desc": "Wir bauen den neuen Antrieb ein, führen notwendige mechanische Anpassungen durch, prüfen die elektrischen Verbindungen und bereiten das Modell für die Einstellung vor."
+      },
+      {
+        "title": "Test",
+        "desc": "Wir fahren das Modell ein, prüfen die Laufruhe, nehmen die Endeinstellung vor und übergeben das Modell mit 6 Monaten Garantie an den Besitzer."
+      }
     ]
   },
   "work": {
@@ -86,8 +116,7 @@
     "bodyLine1": "Erzählen Sie uns von Ihrem Modell. Wir prüfen seine Konstruktion, schlagen die passende Umrüstungsoption vor und erklären Ihnen ehrlich, welche Arbeiten in Ihrem konkreten Fall sinnvoll sind.",
     "bodyLine2": "Railway Atelier hat seinen Sitz in der Ukraine und arbeitet hauptsächlich mit ukrainischen Sammlern und Modelleisenbahn-Enthusiasten. Gleichzeitig nehmen wir gerne Modelle aus aller Welt an, ausgenommen Russland. Der internationale Versand kann über DHL oder Meest organisiert werden, wobei anfallende Zollgebühren vom Kunden zu tragen sind.",
     "quote": "Nach einer gelungenen Konvertierung möchte man manchmal etwas Unerwartetes tun — den Sound abschalten. Und einfach genießen, wie leise und geschmeidig sich das Modell bewegt.",
-    "ctaEmail": "Schreiben Sie uns",
-    "ctaPhone": "Anrufen"
+    "ctaEmail": "Schreiben Sie uns"
   },
   "footer": {
     "about": "Über uns",
