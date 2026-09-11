@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { notFound } from 'next/navigation';
 import { locales, hasLocale, type Locale } from '@/i18n/config';
 import { getDictionary } from '@/i18n/dictionaries';
+
+const GA_MEASUREMENT_ID = 'G-BYY6SPQX00';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -41,7 +44,21 @@ export default async function LocaleLayout({
         />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
       </head>
-      <body>{children}</body>
+      <body>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
+        {children}
+      </body>
     </html>
   );
 }
