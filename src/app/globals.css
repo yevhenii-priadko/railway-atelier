@@ -27,6 +27,22 @@ body {
   line-height: 1.6;
 }
 
+/* Visually hidden but still reachable by screen readers/voice control —
+   e.g. the header's mailto link, which shows an icon on phones and the
+   full email address from the tablet breakpoint up, but should announce
+   the same accessible name at every width. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ── ТИПОГРАФІКА ── */
 .section-label {
   font-family: 'DM Mono', monospace;
@@ -139,12 +155,10 @@ body {
   display: none;
 }
 .nav-contact {
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
   color: var(--tiffany);
   text-decoration: none;
-  border-bottom: 1px solid var(--tiffany);
   padding-bottom: 2px;
   transition: opacity 0.2s;
   white-space: nowrap;
@@ -153,21 +167,27 @@ body {
   opacity: 0.7;
 }
 
-/* On narrow phones, logo + "Написати нам"/"Kontakt aufnehmen" + UA/EN/DE
-   don't all fit on one fixed-height nav row — DE ("Kontakt aufnehmen") is
-   the long pole. Rather than dropping the contact shortcut, shrink the
-   logo, the contact label and the locale switcher just enough that all
-   three keep fitting, in every language, down to real-world phone widths. */
+/* Below the tablet breakpoint (see min-width: 768px below) the full email
+   address doesn't fit next to the logo and the locale switcher on one
+   fixed-height nav row, so the mailto link is just a small icon here —
+   its accessible name (for screen readers/voice control) still comes from
+   the .sr-only span in Nav.tsx, unaffected by which of these is shown. */
+.nav-contact-icon {
+  display: inline-flex;
+}
+.nav-contact-full {
+  display: none;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid var(--tiffany);
+}
+
 @media (max-width: 400px) {
   .site-nav {
     padding: 0 14px;
   }
   .nav-logo img {
     width: 100px;
-  }
-  .nav-contact {
-    font-size: 10px;
-    letter-spacing: 0.04em;
   }
   .locale-switcher {
     gap: 3px;
@@ -179,14 +199,15 @@ body {
   }
 }
 
-/* Below ~340px (very old/small phones, e.g. first-gen iPhone SE) even the
-   shrunk layout above cannot fit "Kontakt aufnehmen" without clipping.
-   That screen size is now vanishingly rare, so on it alone we fall back
-   to hiding the contact shortcut (still reachable via the Contact section
-   further down the page, and via the footer). */
-@media (max-width: 340px) {
-  .nav-contact {
+/* From the tablet breakpoint up there's room to show the real address
+   instead of the icon — same link, same behavior, just readable/selectable
+   text instead of a symbol. */
+@media screen and (min-width: 768px) {
+  .nav-contact-icon {
     display: none;
+  }
+  .nav-contact-full {
+    display: inline;
   }
 }
 
@@ -659,6 +680,14 @@ footer {
 }
 .footer-links a:hover {
   color: var(--tiffany);
+}
+/* The email address stays as one word in normal case — unlike the other
+   footer links, it's real text a visitor may want to read and copy, and
+   uppercasing it with the same wide letter-spacing as "КОНТАКТ"/"CONTACT"
+   just makes an address with a dot and a hyphen harder to parse. */
+.footer-email {
+  text-transform: none;
+  letter-spacing: 0.01em;
 }
 
 /* Below the 768px breakpoint the footer stacks in a single column (see
@@ -1219,7 +1248,9 @@ footer {
      and faded down again: resting state ~28% opacity, hover/current
      locale brighten but still stop short of full saturation. */
   opacity: 0.28;
-  transition: opacity 0.2s, transform 0.15s;
+  transition:
+    opacity 0.2s,
+    transform 0.15s;
 }
 .locale-link svg {
   display: block;
@@ -1258,8 +1289,8 @@ footer {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-areas:
-    "pages pages"
-    "prev  next";
+    'pages pages'
+    'prev  next';
   column-gap: 8px;
   row-gap: 14px;
   align-items: center;
@@ -1369,7 +1400,7 @@ footer {
   .pagination {
     /* Back to a single row once there's room: Prev — page numbers — Next. */
     grid-template-columns: auto 1fr auto;
-    grid-template-areas: "prev pages next";
+    grid-template-areas: 'prev pages next';
     row-gap: 0;
   }
 }
