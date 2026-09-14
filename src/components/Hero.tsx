@@ -33,7 +33,7 @@ export default function Hero({
             here than a fixed width/height. It's the LCP candidate on every
             page load, hence `priority` instead of the default lazy load. */}
         <Image
-          src="/images/photo_hero_with.jpg"
+          src="/images/photo_hero_with.webp"
           alt=""
           fill
           className="hero-img"
