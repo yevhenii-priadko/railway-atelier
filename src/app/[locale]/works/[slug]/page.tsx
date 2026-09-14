@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -65,22 +66,42 @@ export default async function ProjectPage({
             </p>
           </div>
 
+          {/* Photos are admin-uploaded (arbitrary real dimensions), and each
+              box's aspect ratio/height is CSS-driven and changes per
+              breakpoint (see .project-photo in globals.css) — `fill` sizes
+              to whatever that box turns out to be instead of guessing a
+              width/height. object-fit has to move to each Image's own
+              `style` now that .project-photo is the wrapper div, not the
+              img. The main photo is this page's LCP candidate. */}
           <div className="project-photos">
-            <img
-              src={project.photos[0]}
-              alt={t.photoAlts[0]}
-              className="project-photo project-photo-main"
-            />
-            <img
-              src={project.photos[1]}
-              alt={t.photoAlts[1]}
-              className="project-photo"
-            />
-            <img
-              src={project.photos[2]}
-              alt={t.photoAlts[2]}
-              className="project-photo"
-            />
+            <div className="project-photo project-photo-main">
+              <Image
+                src={project.photos[0]}
+                alt={t.photoAlts[0]}
+                fill
+                style={{ objectFit: 'cover' }}
+                sizes="(min-width: 768px) 50vw, 100vw"
+                priority
+              />
+            </div>
+            <div className="project-photo">
+              <Image
+                src={project.photos[1]}
+                alt={t.photoAlts[1]}
+                fill
+                style={{ objectFit: 'cover' }}
+                sizes="(min-width: 768px) 25vw, 100vw"
+              />
+            </div>
+            <div className="project-photo">
+              <Image
+                src={project.photos[2]}
+                alt={t.photoAlts[2]}
+                fill
+                style={{ objectFit: 'cover' }}
+                sizes="(min-width: 768px) 25vw, 100vw"
+              />
+            </div>
           </div>
 
           <div className="project-works">
