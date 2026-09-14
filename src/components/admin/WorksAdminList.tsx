@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { deleteWorkAction, reorderWorksAction } from '@/app/admin/actions';
 import type { Work } from '@/lib/work-types';
+import { imageSrc } from '@/lib/image-url';
 
 export default function WorksAdminList({ works }: { works: Work[] }) {
   const [items, setItems] = useState(works);
@@ -76,7 +77,7 @@ export default function WorksAdminList({ works }: { works: Work[] }) {
           {/* Fixed 56×56 thumbnail (.admin-card-thumb) — a genuinely known
               display size, so plain width/height instead of `fill`. */}
           <Image
-            src={work.photos[0]}
+            src={imageSrc(work.photos[0])}
             alt=""
             width={56}
             height={56}

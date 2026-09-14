@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Locale } from '@/i18n/config';
 import type { Dictionary } from '@/i18n/dictionaries';
 import type { Work } from '@/lib/work-types';
+import { imageSrc } from '@/lib/image-url';
 
 export default function ProjectCard({
   project,
@@ -21,7 +22,7 @@ export default function ProjectCard({
             rather than guessing a width/height. Below the fold, so this
             keeps the default lazy loading. */}
         <Image
-          src={project.photos[0]}
+          src={imageSrc(project.photos[0])}
           alt={t.title}
           fill
           sizes="(min-width: 1025px) 370px, 50vw"

@@ -7,6 +7,7 @@ import { getDictionary } from '@/i18n/dictionaries';
 import { getWorkBySlug, getWorkNeighbors } from '@/lib/works';
 import Nav from '@/components/Nav';
 import Footer from '@/components/Footer';
+import { imageSrc } from '@/lib/image-url';
 
 // Rendered dynamically now (data lives in MongoDB, editable from /admin —
 // no build-time list of slugs to pre-render). The prev/next chain below is
@@ -76,7 +77,7 @@ export default async function ProjectPage({
           <div className="project-photos">
             <div className="project-photo project-photo-main">
               <Image
-                src={project.photos[0]}
+                src={imageSrc(project.photos[0])}
                 alt={t.photoAlts[0]}
                 fill
                 style={{ objectFit: 'cover' }}
@@ -86,7 +87,7 @@ export default async function ProjectPage({
             </div>
             <div className="project-photo">
               <Image
-                src={project.photos[1]}
+                src={imageSrc(project.photos[1])}
                 alt={t.photoAlts[1]}
                 fill
                 style={{ objectFit: 'cover' }}
@@ -95,7 +96,7 @@ export default async function ProjectPage({
             </div>
             <div className="project-photo">
               <Image
-                src={project.photos[2]}
+                src={imageSrc(project.photos[2])}
                 alt={t.photoAlts[2]}
                 fill
                 style={{ objectFit: 'cover' }}
