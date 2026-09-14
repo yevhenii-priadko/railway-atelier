@@ -1,4 +1,5 @@
-import type { Dictionary } from "@/i18n/dictionaries";
+import Image from 'next/image';
+import type { Dictionary } from '@/i18n/dictionaries';
 
 export default function About({ dict }: { dict: Dictionary }) {
   return (
@@ -19,7 +20,16 @@ export default function About({ dict }: { dict: Dictionary }) {
         </div>
       </div>
       <div className="about-visual">
-        <img src="/images/hero-engine.jpg" alt="" />
+        {/* .about-visual sizes itself by aspect-ratio (changes per
+            breakpoint — see globals.css), not a fixed pixel box, so `fill`
+            fits better than a fixed width/height. Below the fold, so it
+            keeps the default lazy loading (no `priority`). */}
+        <Image
+          src="/images/hero-engine.jpg"
+          alt=""
+          fill
+          sizes="(min-width: 768px) 45vw, 100vw"
+        />
       </div>
     </section>
   );
