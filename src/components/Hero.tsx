@@ -1,7 +1,14 @@
-import type { Locale } from "@/i18n/config";
-import type { Dictionary } from "@/i18n/dictionaries";
+import Image from 'next/image';
+import type { Locale } from '@/i18n/config';
+import type { Dictionary } from '@/i18n/dictionaries';
 
-export default function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
+export default function Hero({
+  locale,
+  dict,
+}: {
+  locale: Locale;
+  dict: Dictionary;
+}) {
   return (
     <section className="hero">
       <div className="hero-left">
@@ -20,7 +27,19 @@ export default function Hero({ locale, dict }: { locale: Locale; dict: Dictionar
         <blockquote className="hero-quote">{dict.hero.quote}</blockquote>
       </div>
       <div className="hero-right">
-        <img src="/images/photo_hero_with.jpg" alt="" className="hero-img" />
+        {/* .hero-right's own height is viewport-relative (60vw on mobile,
+            fluid on desktop — see globals.css), not a fixed pixel box, so
+            `fill` (sizing to whatever that box turns out to be) fits better
+            here than a fixed width/height. It's the LCP candidate on every
+            page load, hence `priority` instead of the default lazy load. */}
+        <Image
+          src="/images/photo_hero_with.jpg"
+          alt=""
+          fill
+          className="hero-img"
+          sizes="(min-width: 768px) 50vw, 100vw"
+          priority
+        />
       </div>
     </section>
   );

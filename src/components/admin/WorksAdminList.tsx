@@ -1,10 +1,11 @@
-"use client";
+'use client';
 
-import { useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { deleteWorkAction, reorderWorksAction } from "@/app/admin/actions";
-import type { Work } from "@/lib/work-types";
+import { useState, useTransition } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { deleteWorkAction, reorderWorksAction } from '@/app/admin/actions';
+import type { Work } from '@/lib/work-types';
 
 export default function WorksAdminList({ works }: { works: Work[] }) {
   const [items, setItems] = useState(works);
@@ -26,9 +27,10 @@ export default function WorksAdminList({ works }: { works: Work[] }) {
   }
 
   function handleDelete(work: Work) {
-    if (!confirm(`Видалити «${work.translations.uk.title}»? Це незворотно.`)) return;
+    if (!confirm(`Видалити «${work.translations.uk.title}»? Це незворотно.`))
+      return;
     const formData = new FormData();
-    formData.set("id", work.id);
+    formData.set('id', work.id);
     startTransition(async () => {
       await deleteWorkAction(formData);
       setItems((prev) => prev.filter((w) => w.id !== work.id));
@@ -37,7 +39,11 @@ export default function WorksAdminList({ works }: { works: Work[] }) {
   }
 
   if (items.length === 0) {
-    return <p className="admin-empty">Робіт ще немає — натисніть «Додати роботу», щоб внести першу.</p>;
+    return (
+      <p className="admin-empty">
+        Робіт ще немає — натисніть «Додати роботу», щоб внести першу.
+      </p>
+    );
   }
 
   return (
@@ -67,8 +73,15 @@ export default function WorksAdminList({ works }: { works: Work[] }) {
             </button>
           </div>
 
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={work.photos[0]} alt="" className="admin-card-thumb" />
+          {/* Fixed 56×56 thumbnail (.admin-card-thumb) — a genuinely known
+              display size, so plain width/height instead of `fill`. */}
+          <Image
+            src={work.photos[0]}
+            alt=""
+            width={56}
+            height={56}
+            className="admin-card-thumb"
+          />
 
           <div className="admin-card-info">
             <div className="admin-card-title">{work.translations.uk.title}</div>
@@ -78,7 +91,10 @@ export default function WorksAdminList({ works }: { works: Work[] }) {
           </div>
 
           <div className="admin-card-actions">
-            <Link href={`/admin/works/${work.id}/edit`} className="admin-btn admin-btn-secondary">
+            <Link
+              href={`/admin/works/${work.id}/edit`}
+              className="admin-btn admin-btn-secondary"
+            >
               Редагувати
             </Link>
             <button

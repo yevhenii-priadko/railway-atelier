@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Locale } from '@/i18n/config';
 import type { Dictionary } from '@/i18n/dictionaries';
@@ -20,7 +21,17 @@ export default function Footer({
       <div className="tiffany-rule" />
       <footer>
         <div className="footer-logo">
-          <img src="/images/logo.svg" alt="Railway Atelier" height={40} />
+          {/* Same reasoning as Nav's logo: it's a small SVG, so it skips
+              Next's raster optimizer (unoptimized) instead of needing
+              dangerouslyAllowSVG. 160×40 keeps the logo's actual 4:1 ratio
+              (280×70 viewBox) at the same visible size as before. */}
+          <Image
+            src="/images/logo.svg"
+            alt="Railway Atelier"
+            width={160}
+            height={40}
+            unoptimized
+          />
         </div>
         <div className="footer-bottom-row">
           <ul className="footer-links">

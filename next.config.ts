@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   // No longer a static export: the works archive now reads from MongoDB
@@ -11,16 +11,17 @@ const nextConfig: NextConfig = {
   // most hosts and keeps the same URLs as the previous static-export version.
   trailingSlash: true,
 
-  // We use plain <img> tags (like the original site) instead of next/image,
-  // so no image loader configuration is required.
-  images: {
-    unoptimized: true,
-  },
+  // Switched from plain <img> tags to next/image (PageSpeed flagged the
+  // real work photos as oversized/unoptimized on mobile). All sources are
+  // same-origin — /public files or the /api/images/[id] GridFS route — so
+  // no remotePatterns/domains config is needed for the built-in optimizer.
+  // This runs as a real Node server (see above), so `sharp` is required in
+  // production for the optimizer; it's in package.json's dependencies.
 
   // If this site is deployed under a sub-path (e.g. GitHub Pages project
   // pages at username.github.io/repo-name/), set NEXT_BASE_PATH at build
   // time and Next.js will prefix all routes and assets with it.
-  basePath: process.env.NEXT_BASE_PATH || "",
+  basePath: process.env.NEXT_BASE_PATH || '',
 };
 
 export default nextConfig;

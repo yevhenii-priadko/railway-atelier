@@ -1,7 +1,8 @@
-import Link from "next/link";
-import type { Locale } from "@/i18n/config";
-import type { Dictionary } from "@/i18n/dictionaries";
-import type { Work } from "@/lib/work-types";
+import Image from 'next/image';
+import Link from 'next/link';
+import type { Locale } from '@/i18n/config';
+import type { Dictionary } from '@/i18n/dictionaries';
+import type { Work } from '@/lib/work-types';
 
 export default function ProjectCard({
   project,
@@ -15,7 +16,16 @@ export default function ProjectCard({
   return (
     <Link href={`/${locale}/works/${project.slug}/`} className="gallery-card">
       <div className="gallery-card-img">
-        <img src={project.photos[0]} alt={t.title} />
+        {/* Photos are admin-uploaded, so their real dimensions vary — fill
+            the fixed-aspect-ratio box (see .gallery-card-img in globals.css)
+            rather than guessing a width/height. Below the fold, so this
+            keeps the default lazy loading. */}
+        <Image
+          src={project.photos[0]}
+          alt={t.title}
+          fill
+          sizes="(min-width: 1025px) 370px, 50vw"
+        />
       </div>
       <div className="gallery-card-info">
         <div className="gallery-card-maker">

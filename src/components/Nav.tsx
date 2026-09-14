@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Locale } from '@/i18n/config';
 import type { Dictionary } from '@/i18n/dictionaries';
@@ -43,7 +44,16 @@ export default function Nav({
     <nav className="site-nav">
       <div className="nav-inner">
         <Link href={`/${locale}/`} className="nav-logo">
-          <img src="/images/logo.svg" width={220} alt="Railway Atelier" />
+          {/* SVG, and CSS (.nav-logo img) does the actual visual sizing —
+              nothing here for Next's optimizer to usefully resize/recompress,
+              so this skips it rather than adding dangerouslyAllowSVG. */}
+          <Image
+            src="/images/logo.svg"
+            alt="Railway Atelier"
+            width={280}
+            height={70}
+            unoptimized
+          />
         </Link>
         <ul className="nav-links">
           <li>
