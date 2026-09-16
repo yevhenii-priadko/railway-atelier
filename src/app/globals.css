@@ -20,7 +20,7 @@ html {
   scroll-behavior: smooth;
 }
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), sans-serif;
   color: var(--dark);
   background: var(--white);
   font-weight: 300;
@@ -45,7 +45,7 @@ body {
 
 /* ── ТИПОГРАФІКА ── */
 .section-label {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -53,7 +53,7 @@ body {
   margin-bottom: 20px;
 }
 .section-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-size: clamp(26px, 6vw, 42px);
   font-weight: 400;
   line-height: 1.2;
@@ -67,7 +67,7 @@ body {
   margin-bottom: 20px;
 }
 .section-tagline {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-size: 17px;
   font-style: italic;
   color: var(--tiffany);
@@ -257,7 +257,7 @@ body {
 }
 
 .hero-eyebrow {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -265,7 +265,7 @@ body {
   margin-bottom: 16px;
 }
 .hero-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-size: clamp(30px, 8vw, 44px);
   font-weight: 400;
   line-height: 1.1;
@@ -299,7 +299,7 @@ body {
   background: #089490;
 }
 .hero-quote {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-size: 13px;
   font-style: italic;
   color: var(--mid);
@@ -340,7 +340,7 @@ body {
   border-top: 1px solid var(--rule);
 }
 .stat-number {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-size: 36px;
   color: var(--tiffany);
   line-height: 1;
@@ -385,14 +385,14 @@ body {
   border: 1px solid var(--rule);
 }
 .service-num {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   color: var(--tiffany);
   letter-spacing: 0.15em;
   margin-bottom: 20px;
 }
 .service-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-size: 20px;
   color: var(--dark);
   font-weight: 400;
@@ -458,7 +458,7 @@ body {
   flex-shrink: 0;
 }
 .step-dot-num {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 13px;
   color: var(--tiffany);
   font-weight: 400;
@@ -470,7 +470,7 @@ body {
   min-width: 0;
 }
 .step-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-size: 17px;
   font-weight: 400;
   color: var(--dark);
@@ -544,14 +544,14 @@ body {
   gap: 6px;
 }
 .gallery-card-maker {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--tiffany);
 }
 .gallery-card-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-size: 14px;
   font-weight: 400;
   color: var(--dark);
@@ -565,14 +565,14 @@ body {
   margin-top: 2px;
 }
 .gallery-card-type {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--mid);
 }
 .gallery-card-scale {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -602,7 +602,7 @@ body {
   color: var(--tiffany-light);
 }
 .gallery-card-placeholder-text {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.06em;
   color: var(--mid);
@@ -625,7 +625,7 @@ body {
   margin: 0 auto 40px;
 }
 .contact-quote {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-size: 17px;
   font-style: italic;
   color: var(--dark);
@@ -657,7 +657,7 @@ footer {
   gap: 20px;
 }
 .footer-logo {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-size: 20px;
   color: var(--dark);
 }
@@ -665,7 +665,7 @@ footer {
   color: var(--tiffany);
 }
 .footer-copy {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   color: var(--dark);
   letter-spacing: 0.1em;
@@ -727,7 +727,7 @@ footer {
 
 .project-back {
   display: inline-block;
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -745,7 +745,7 @@ footer {
 }
 
 .project-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-size: clamp(26px, 6vw, 40px);
   font-weight: 400;
   line-height: 1.2;
@@ -755,7 +755,7 @@ footer {
 }
 
 .project-meta {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -790,7 +790,7 @@ footer {
 }
 
 .project-works-title {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -814,7 +814,7 @@ footer {
 }
 
 .project-summary {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), serif;
   font-style: italic;
   font-size: 16px;
   color: var(--mid);
@@ -834,7 +834,7 @@ footer {
 }
 
 .project-nav-link {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -847,7 +847,7 @@ footer {
 }
 
 .project-nav-disabled {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1324,7 +1324,7 @@ footer {
 .pagination-link {
   background: none;
   cursor: pointer;
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -1342,7 +1342,7 @@ footer {
   color: var(--white);
 }
 .pagination-disabled {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -1354,7 +1354,7 @@ footer {
   flex-shrink: 0;
 }
 .pagination-status {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.1em;
   color: var(--mid);
@@ -1370,7 +1370,7 @@ footer {
 .pagination-page {
   background: none;
   cursor: pointer;
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 12px;
   font-weight: 600;
   color: var(--dark);
@@ -1394,7 +1394,7 @@ footer {
   box-shadow: 0 2px 10px rgba(10, 186, 181, 0.35);
 }
 .pagination-ellipsis {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-dm-mono), monospace;
   font-size: 12px;
   font-weight: 600;
   color: var(--mid);
