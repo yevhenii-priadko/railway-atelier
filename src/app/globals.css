@@ -1039,8 +1039,7 @@ footer {
     gap: 12px;
   }
   .project-photo {
-    aspect-ratio: unset;
-    height: 100%;
+    aspect-ratio: 3/2;
   }
   .project-photo-main {
     grid-row: span 2;

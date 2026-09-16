@@ -1,10 +1,10 @@
-import "server-only";
-import { Types } from "mongoose";
-import { connectMongoose } from "./mongoose";
-import { WorkModel, type WorkDocument } from "@/models/Work";
-import { deleteImage } from "./gridfs";
-import { slugify } from "./slugify";
-import type { Work, WorkInput } from "./work-types";
+import 'server-only';
+import { connectMongoose } from './mongoose';
+import { WorkModel, type WorkDocument } from '@/models/Work';
+import { deleteImage } from './gridfs';
+import { slugify } from './slugify';
+import type { Work, WorkInput } from './work-types';
+import { Types, type HydratedDocument } from 'mongoose';
 
 // 6 per page — a full row-and-a-half on the archive's 2-column mobile grid,
 // exactly two rows of 3 on its desktop grid (see .works-grid in globals.css).
@@ -12,16 +12,17 @@ import type { Work, WorkInput } from "./work-types";
 // dedicated page with no homepage pagination competing for the same data.
 export const WORKS_PER_PAGE = 6;
 
-function toWork(doc: WorkDocument & { _id: Types.ObjectId }): Work {
+function toWork(doc: HydratedDocument<WorkDocument>): Work {
+  const plain = doc.toObject();
   return {
-    id: doc._id.toString(),
-    slug: doc.slug,
-    maker: doc.maker,
-    article: doc.article,
-    scale: doc.scale,
-    photos: doc.photos as [string, string, string],
-    translations: doc.translations as Work["translations"],
-    sortOrder: doc.sortOrder,
+    id: plain._id.toString(),
+    slug: plain.slug,
+    maker: plain.maker,
+    article: plain.article,
+    scale: plain.scale,
+    photos: plain.photos as [string, string, string],
+    translations: plain.translations as Work['translations'],
+    sortOrder: plain.sortOrder,
   };
 }
 
@@ -63,7 +64,9 @@ export async function getWorkNeighbors(
 
   const [prev, next] = await Promise.all([
     index > 0 ? getWorkBySlug(all[index - 1].slug) : Promise.resolve(null),
-    index < all.length - 1 ? getWorkBySlug(all[index + 1].slug) : Promise.resolve(null),
+    index < all.length - 1
+      ? getWorkBySlug(all[index + 1].slug)
+      : Promise.resolve(null),
   ]);
   return { prev, next };
 }
@@ -93,7 +96,9 @@ export async function createWork(input: WorkInput): Promise<Work> {
   await connectMongoose();
   await assertSlugAvailable(input.slug);
 
-  const highest = await WorkModel.findOne({}, { sortOrder: 1 }).sort({ sortOrder: -1 });
+  const highest = await WorkModel.findOne({}, { sortOrder: 1 }).sort({
+    sortOrder: -1,
+  });
   const sortOrder = (highest?.sortOrder ?? -1) + 1;
 
   const doc = await WorkModel.create({ ...input, sortOrder });
@@ -101,12 +106,13 @@ export async function createWork(input: WorkInput): Promise<Work> {
 }
 
 export async function updateWork(id: string, input: WorkInput): Promise<Work> {
-  if (!Types.ObjectId.isValid(id)) throw new Error("Невірний ідентифікатор роботи.");
+  if (!Types.ObjectId.isValid(id))
+    throw new Error('Невірний ідентифікатор роботи.');
   await connectMongoose();
   await assertSlugAvailable(input.slug, id);
 
   const doc = await WorkModel.findById(id);
-  if (!doc) throw new Error("Роботу не знайдено.");
+  if (!doc) throw new Error('Роботу не знайдено.');
   const oldPhotos = [...doc.photos];
 
   doc.set(input);
@@ -115,13 +121,18 @@ export async function updateWork(id: string, input: WorkInput): Promise<Work> {
   // Any photo that was replaced (new upload took its place) is no longer
   // referenced anywhere — clean it up. Photos still in use are untouched.
   const stillUsed = new Set(input.photos);
-  await Promise.all(oldPhotos.filter((url) => !stillUsed.has(url)).map((url) => deleteImage(url)));
+  await Promise.all(
+    oldPhotos
+      .filter((url) => !stillUsed.has(url))
+      .map((url) => deleteImage(url))
+  );
 
   return toWork(doc);
 }
 
 export async function deleteWork(id: string): Promise<void> {
-  if (!Types.ObjectId.isValid(id)) throw new Error("Невірний ідентифікатор роботи.");
+  if (!Types.ObjectId.isValid(id))
+    throw new Error('Невірний ідентифікатор роботи.');
   await connectMongoose();
   const doc = await WorkModel.findByIdAndDelete(id);
   if (!doc) return;

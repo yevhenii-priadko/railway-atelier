@@ -1,5 +1,5 @@
-import dns from "node:dns";
-import mongoose from "mongoose";
+import dns from 'node:dns';
+import mongoose from 'mongoose';
 
 // Some local networks/routers block SRV-type DNS queries, which
 // mongodb+srv:// needs to resolve the cluster's shard hosts — this showed
@@ -8,7 +8,7 @@ import mongoose from "mongoose";
 // at Google's public DNS sidesteps it. Harmless in production (Render's
 // network already resolves SRV records fine) and only applies to this
 // process's own DNS lookups, so it doesn't touch anything system-wide.
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
+dns.setServers(['1.1.1.1', '1.0.0.1']);
 
 // Standard Next.js + Mongoose connection-caching pattern: in dev, Next
 // reloads modules on every edit, which would otherwise open a fresh
@@ -17,7 +17,7 @@ dns.setServers(["8.8.8.8", "8.8.4.4"]);
 // simple singleton.
 
 const MONGODB_URI = process.env.MONGODB_URI;
-const MONGODB_DB = process.env.MONGODB_DB || "railway_atelier";
+const MONGODB_DB = process.env.MONGODB_DB || 'railway_atelier';
 
 declare global {
   var _mongooseConnPromise: Promise<typeof mongoose> | undefined;
@@ -27,8 +27,8 @@ declare global {
 export function connectMongoose(): Promise<typeof mongoose> {
   if (!MONGODB_URI) {
     throw new Error(
-      "MONGODB_URI is not set. Add it to your environment (see .env.example) — " +
-        "the works archive and /admin cannot read or write data without it."
+      'MONGODB_URI is not set. Add it to your environment (see .env.example) — ' +
+        'the works archive and /admin cannot read or write data without it.'
     );
   }
 
@@ -37,10 +37,12 @@ export function connectMongoose(): Promise<typeof mongoose> {
     // set up yet), don't cache the rejected promise forever — clear it so
     // the next request tries again instead of failing until the process
     // restarts.
-    global._mongooseConnPromise = mongoose.connect(MONGODB_URI, { dbName: MONGODB_DB }).catch((err) => {
-      global._mongooseConnPromise = undefined;
-      throw err;
-    });
+    global._mongooseConnPromise = mongoose
+      .connect(MONGODB_URI, { dbName: MONGODB_DB })
+      .catch((err) => {
+        global._mongooseConnPromise = undefined;
+        throw err;
+      });
   }
   return global._mongooseConnPromise;
 }
