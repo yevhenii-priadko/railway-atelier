@@ -1,4 +1,5 @@
 import type { Locale } from "@/i18n/config";
+import type { Engine } from "./engines";
 
 // Same shape as before the migration to MongoDB (src/data/projects.ts) —
 // kept identical on purpose so none of the rendering components (Gallery,
@@ -21,6 +22,8 @@ export interface Work {
   maker: string;
   article: string;
   scale: string;
+  /** Fitted motor; null for older works where Anton hasn't picked one yet. */
+  engine: Engine | null;
   /**
    * Exactly 3 photo URLs. Either a static path into /public (for the
    * originally-migrated projects, e.g. "/images/hero-engine.jpg") or
@@ -38,6 +41,7 @@ export interface WorkInput {
   maker: string;
   article: string;
   scale: string;
+  engine: Engine;
   photos: [string, string, string];
   translations: Record<Locale, WorkTranslation>;
 }

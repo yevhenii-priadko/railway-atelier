@@ -3,6 +3,7 @@ import { connectMongoose } from './mongoose';
 import { WorkModel, type WorkDocument } from '@/models/Work';
 import { deleteImage } from './gridfs';
 import { slugify } from './slugify';
+import { isEngine, type Engine } from './engines';
 import type { Work, WorkInput } from './work-types';
 import { Types, type HydratedDocument } from 'mongoose';
 
@@ -20,6 +21,7 @@ function toWork(doc: HydratedDocument<WorkDocument>): Work {
     maker: plain.maker,
     article: plain.article,
     scale: plain.scale,
+    engine: isEngine(plain.engine) ? plain.engine : null,
     photos: plain.photos as [string, string, string],
     translations: plain.translations as Work['translations'],
     sortOrder: plain.sortOrder,
@@ -71,11 +73,11 @@ export async function getWorkNeighbors(
   return { prev, next };
 }
 
-/** Just the slugs, in display order — cheap enough to call from sitemap.ts on every request. */
-export async function getAllWorkSlugs(): Promise<string[]> {
+/** Slug + engine (everything a work's URL is built from), in display order — cheap enough to call from sitemap.ts on every request. */
+export async function getAllWorkUrlParts(): Promise<{ slug: string; engine: Engine | null }[]> {
   await connectMongoose();
-  const docs = await WorkModel.find({}, { slug: 1 }).sort({ sortOrder: 1 });
-  return docs.map((d) => d.slug);
+  const docs = await WorkModel.find({}, { slug: 1, engine: 1 }).sort({ sortOrder: 1 });
+  return docs.map((d) => ({ slug: d.slug, engine: isEngine(d.engine) ? d.engine : null }));
 }
 
 /** Full list, sorted for display in /admin. Same data as the public site sees. */

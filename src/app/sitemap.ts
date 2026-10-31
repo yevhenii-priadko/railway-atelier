@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { locales } from "@/i18n/config";
-import { getAllWorkSlugs } from "@/lib/works";
+import { getAllWorkUrlParts } from "@/lib/works";
+import { workPath } from "@/lib/engines";
 
 // Was force-static (data used to be a build-time array); now the archive
 // changes whenever Anton adds/removes a work in /admin, so the sitemap is
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://example.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const slugs = await getAllWorkSlugs();
+  const works = await getAllWorkUrlParts();
   const entries: MetadataRoute.Sitemap = [];
 
   for (const locale of locales) {
@@ -23,9 +24,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // The paginated archive listing (/works/, /works/page/2/, ...) is gone
     // — it's the homepage's #work section now, already covered above.
 
-    for (const slug of slugs) {
+    // Same URL builder as the gallery links and canonical tags, so the
+    // sitemap always lists each work's current address (with its
+    // "<engine>-engine" segment once one is set in /admin).
+    for (const work of works) {
       entries.push({
-        url: `${SITE_URL}/${locale}/works/${slug}/`,
+        url: `${SITE_URL}${workPath(locale, work)}`,
         changeFrequency: "yearly",
         priority: 0.7,
       });

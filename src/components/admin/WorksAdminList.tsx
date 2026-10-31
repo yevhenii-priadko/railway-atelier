@@ -87,7 +87,10 @@ export default function WorksAdminList({ works }: { works: Work[] }) {
           <div className="admin-card-info">
             <div className="admin-card-title">{work.translations.uk.title}</div>
             <div className="admin-card-meta">
-              {work.maker} · {work.article} · {work.scale}
+              {work.maker} · {work.article} · {work.scale} ·{' '}
+              {work.engine ?? (
+                <span className="admin-card-warning">двигун не вказано</span>
+              )}
             </div>
           </div>
 

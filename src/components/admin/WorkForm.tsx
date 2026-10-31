@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { locales, type Locale } from "@/i18n/config";
 import { createWorkAction, updateWorkAction, type ActionState } from "@/app/admin/actions";
 import type { Work } from "@/lib/work-types";
+import { ENGINES, engineSegment, type Engine } from "@/lib/engines";
 
 const LOCALE_LABEL: Record<Locale, string> = { uk: "Українська", en: "English", de: "Deutsch" };
 
@@ -43,6 +44,7 @@ export default function WorkForm({ mode, work }: { mode: "create" | "edit"; work
   const [maker, setMaker] = useState(work?.maker ?? "");
   const [article, setArticle] = useState(work?.article ?? "");
   const [scale, setScale] = useState(work?.scale ?? "");
+  const [engine, setEngine] = useState<Engine | "">(work?.engine ?? "");
   const [translations, setTranslations] = useState<Record<Locale, TranslationFields>>(() => {
     const initial = {} as Record<Locale, TranslationFields>;
     for (const locale of locales) {
@@ -73,8 +75,8 @@ export default function WorkForm({ mode, work }: { mode: "create" | "edit"; work
       {mode === "edit" && work && <input type="hidden" name="workId" value={work.id} />}
       {state.error && <div className="admin-error">{state.error}</div>}
 
-      <div className="admin-panel" style={{ marginBottom: 20 }}>
-        <div className="admin-row">
+      <div className="admin-panel admin-panel-compact" style={{ marginBottom: 20 }}>
+        <div className="admin-row admin-row-compact">
           <div className="admin-field">
             <label htmlFor="maker">Виробник</label>
             <input
@@ -111,7 +113,32 @@ export default function WorkForm({ mode, work }: { mode: "create" | "edit"; work
               required
             />
           </div>
+          <div className="admin-field">
+            <label htmlFor="engine">Двигун</label>
+            <select
+              id="engine"
+              name="engine"
+              value={engine}
+              onChange={(e) => setEngine(e.target.value as Engine | "")}
+              required
+            >
+              <option value="" disabled>
+                — оберіть —
+              </option>
+              {ENGINES.map((e) => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+        {mode === "edit" && work && (
+          <p className="admin-hint" style={{ marginTop: 8 }}>
+            Адреса сторінки: /uk/works/{work.slug}/{engine ? `${engineSegment(engine)}/` : ""}
+            {!work.engine && " — після вибору двигуна стара адреса автоматично перенаправлятиме на нову."}
+          </p>
+        )}
       </div>
 
       <div className="admin-panel" style={{ marginBottom: 20 }}>

@@ -4,6 +4,7 @@ import type { Locale } from '@/i18n/config';
 import type { Dictionary } from '@/i18n/dictionaries';
 import type { Work } from '@/lib/work-types';
 import { imageSrc } from '@/lib/image-url';
+import { workPath } from '@/lib/engines';
 
 export default function ProjectCard({
   project,
@@ -15,7 +16,7 @@ export default function ProjectCard({
 }) {
   const t = project.translations[locale];
   return (
-    <Link href={`/${locale}/works/${project.slug}/`} className="gallery-card">
+    <Link href={workPath(locale, project)} className="gallery-card">
       <div className="gallery-card-img">
         {/* Photos are admin-uploaded, so their real dimensions vary — fill
             the fixed-aspect-ratio box (see .gallery-card-img in globals.css)

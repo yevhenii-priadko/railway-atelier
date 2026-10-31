@@ -2,6 +2,7 @@ import "server-only";
 import { locales, type Locale } from "@/i18n/config";
 import { storeImage } from "./gridfs";
 import type { WorkTranslation } from "./work-types";
+import { ENGINES, isEngine, type Engine } from "./engines";
 
 // Word for "photo" in each locale, used to auto-build alt text so the
 // admin form never has to ask Anton to type nine alt-text variants by hand.
@@ -11,6 +12,7 @@ export interface ParsedWorkFields {
   maker: string;
   article: string;
   scale: string;
+  engine: Engine;
   translations: Record<Locale, WorkTranslation>;
 }
 
@@ -33,6 +35,10 @@ export function parseWorkFields(formData: FormData): ParsedWorkFields {
   const maker = requiredText(formData, "maker");
   const article = requiredText(formData, "article");
   const scale = requiredText(formData, "scale");
+  const engine = String(formData.get("engine") ?? "").trim();
+  if (!isEngine(engine)) {
+    throw new Error(`Оберіть двигун: ${ENGINES.join(", ")}.`);
+  }
 
   const translations = {} as Record<Locale, WorkTranslation>;
   for (const locale of locales) {
@@ -60,7 +66,7 @@ export function parseWorkFields(formData: FormData): ParsedWorkFields {
     };
   }
 
-  return { maker, article, scale, translations };
+  return { maker, article, scale, engine, translations };
 }
 
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024; // 10MB

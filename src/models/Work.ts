@@ -1,4 +1,5 @@
 import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { ENGINES } from "@/lib/engines";
 
 const exactlyThree = {
   validator: (v: string[]) => Array.isArray(v) && v.length === 3,
@@ -31,6 +32,11 @@ const workSchema = new Schema(
     maker: { type: String, required: true },
     article: { type: String, required: true },
     scale: { type: String, required: true },
+    // Motor fitted in the conversion (Maxon / Faulhaber / SBM). Optional so
+    // works created before this field existed stay valid untouched; until
+    // Anton picks one in /admin, the work keeps its old URL with no
+    // "<engine>-engine" segment (see src/lib/engines.ts).
+    engine: { type: String, enum: [...ENGINES], required: false, default: null },
     // Either a static "/images/foo.jpg" path (the 6 originally-seeded
     // works) or "/api/images/<gridfsId>" for anything uploaded via /admin.
     photos: { type: [String], required: true, validate: exactlyThree },

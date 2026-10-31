@@ -179,6 +179,39 @@
 .admin-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 @media (max-width: 640px) { .admin-row { grid-template-columns: 1fr; } }
 
+/* Maker / article / scale / engine — short values, so one tight row of
+   four instead of three wide boxes taking up the top of the form. */
+.admin-panel-compact { padding-top: 14px; padding-bottom: 14px; }
+.admin-row-compact {
+  grid-template-columns: repeat(4, minmax(0, 170px));
+  gap: 10px;
+}
+.admin-row-compact .admin-field { margin-bottom: 0; }
+.admin-row-compact .admin-field label { margin-bottom: 4px; font-size: 12px; }
+.admin-row-compact .admin-field input[type="text"],
+.admin-row-compact .admin-field select { padding: 7px 10px; font-size: 14px; }
+@media (max-width: 640px) {
+  .admin-row-compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.admin-field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  color: inherit;
+}
+.admin-field select:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px rgba(10, 186, 181, 0.15);
+}
+.admin-card-warning { color: #b4561b; font-weight: 600; }
+
 .admin-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
 @media (max-width: 640px) { .admin-photos { grid-template-columns: 1fr; } }
 .admin-photo-slot { text-align: center; }
