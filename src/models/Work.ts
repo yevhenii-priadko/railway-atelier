@@ -35,7 +35,7 @@ const workSchema = new Schema(
     // Motor fitted in the conversion (Maxon / Faulhaber / SBM). Optional so
     // works created before this field existed stay valid untouched; until
     // Anton picks one in /admin, the work keeps its old URL with no
-    // "<engine>-engine" segment (see src/lib/engines.ts).
+    // "<engine>-electric-motor-conversion" segment (see src/lib/engines.ts).
     engine: { type: String, enum: [...ENGINES], required: false, default: null },
     // Either a static "/images/foo.jpg" path (the 6 originally-seeded
     // works) or "/api/images/<gridfsId>" for anything uploaded via /admin.

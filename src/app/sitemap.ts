@@ -26,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Same URL builder as the gallery links and canonical tags, so the
     // sitemap always lists each work's current address (with its
-    // "<engine>-engine" segment once one is set in /admin).
+    // "<engine>-electric-motor-conversion" segment once one is set in /admin).
     for (const work of works) {
       entries.push({
         url: `${SITE_URL}${workPath(locale, work)}`,

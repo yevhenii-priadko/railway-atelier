@@ -6,7 +6,7 @@ import { workPath } from '@/lib/engines';
 import ProjectDetail, { projectMetadata } from '@/components/ProjectDetail';
 
 // The pre-engine URL, /[locale]/works/[slug]/. Once a work has an engine
-// set in /admin, its real address gains a "<engine>-engine" segment
+// set in /admin, its real address gains a "<engine>-electric-motor-conversion" segment
 // (/[locale]/works/[slug]/[engine]/) and this one permanently redirects
 // there, so old links and indexed pages carry over. Works with no engine
 // picked yet are still served here as before — nothing is guessed.

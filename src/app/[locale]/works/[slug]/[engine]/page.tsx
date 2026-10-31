@@ -6,7 +6,7 @@ import { engineSegment, workPath } from '@/lib/engines';
 import ProjectDetail, { projectMetadata } from '@/components/ProjectDetail';
 
 // Canonical work URL once an engine is set: /[locale]/works/[slug]/[engine]/,
-// e.g. /uk/works/lilliput-131-302/maxon-engine/. The segment is derived from
+// e.g. /uk/works/lilliput-131-302/maxon-electric-motor-conversion/. The segment is derived from
 // the work's stored engine on every request (src/lib/engines.ts) — it isn't
 // stored separately, so changing the engine in /admin moves the page with
 // no record being recreated.
